@@ -291,6 +291,20 @@ public class SampleMecanumDrive extends MecanumDrive {
         rightFront.setPower(rf);
     }
 
+    public void goToEncoderPosition(int leftFrontPosition, int leftRearPosition, int rightRearPosition, int rightFrontPosition, double power) {
+        leftFront.setTargetPosition(leftFrontPosition);
+        leftRear.setTargetPosition(leftRearPosition);
+        rightRear.setTargetPosition(rightRearPosition);
+        rightFront.setTargetPosition(rightFrontPosition);
+        setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        setMotorPowers(power, power, power, power);
+        while (leftFront.isBusy() && leftRear.isBusy() && rightRear.isBusy() && rightFront.isBusy()) {
+            // wait until target position is reached
+        }
+        setMotorPowers(0, 0, 0, 0);
+        setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
     @Override
     public double getRawExternalHeading() {
         return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
