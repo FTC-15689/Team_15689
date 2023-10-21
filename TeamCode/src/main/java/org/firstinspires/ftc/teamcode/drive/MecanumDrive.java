@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.control.PIDCoefficients;
 import com.acmerobotics.roadrunner.drive.DriveSignal;
-import com.acmerobotics.roadrunner.drive.MecanumDrive;
 import com.acmerobotics.roadrunner.followers.HolonomicPIDVAFollower;
 import com.acmerobotics.roadrunner.followers.TrajectoryFollower;
 import com.acmerobotics.roadrunner.geometry.Pose2d;
@@ -54,7 +53,7 @@ import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
  * Simple mecanum drive hardware implementation for REV hardware.
  */
 @Config
-public class SampleMecanumDrive extends MecanumDrive {
+public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive {
     public static PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(0, 0, 0);
     public static PIDCoefficients HEADING_PID = new PIDCoefficients(0, 0, 0);
 
@@ -80,7 +79,7 @@ public class SampleMecanumDrive extends MecanumDrive {
     private List<Integer> lastEncPositions = new ArrayList<>();
     private List<Integer> lastEncVels = new ArrayList<>();
 
-    public SampleMecanumDrive(HardwareMap hardwareMap) {
+    public MecanumDrive(HardwareMap hardwareMap) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
 
         follower = new HolonomicPIDVAFollower(TRANSLATIONAL_PID, TRANSLATIONAL_PID, HEADING_PID,
@@ -259,6 +258,7 @@ public class SampleMecanumDrive extends MecanumDrive {
     @NonNull
     @Override
     public List<Double> getWheelPositions() {
+        // lf lr rr rf
         lastEncPositions.clear();
 
         List<Double> wheelPositions = new ArrayList<>();
@@ -268,6 +268,17 @@ public class SampleMecanumDrive extends MecanumDrive {
             wheelPositions.add(encoderTicksToInches(position));
         }
         return wheelPositions;
+    }
+
+    /**
+     *
+     * @param wheelNum Index of the wheel, (0:lf, 1:lr, 2:rr, 3:rf)
+     * @return encoder position of the wheel
+     */
+    public int getWheelPosition(int wheelNum) throws IndexOutOfBoundsException {
+        DcMotor motor = motors.get(wheelNum);
+
+        return motor.getCurrentPosition();
     }
 
     @Override
@@ -291,18 +302,34 @@ public class SampleMecanumDrive extends MecanumDrive {
         rightFront.setPower(rf);
     }
 
-    public void goToEncoderPosition(int leftFrontPosition, int leftRearPosition, int rightRearPosition, int rightFrontPosition, double power) {
+    public void goToEncoderPositionABS(int leftFrontPosition, int leftRearPosition, int rightRearPosition, int rightFrontPosition, double power) {
         leftFront.setTargetPosition(leftFrontPosition);
         leftRear.setTargetPosition(leftRearPosition);
         rightRear.setTargetPosition(rightRearPosition);
         rightFront.setTargetPosition(rightFrontPosition);
         setMode(DcMotor.RunMode.RUN_TO_POSITION);
         setMotorPowers(power, power, power, power);
-        while (leftFront.isBusy() && leftRear.isBusy() && rightRear.isBusy() && rightFront.isBusy()) {
-            // wait until target position is reached
-        }
+        waitForIdle();
+
         setMotorPowers(0, 0, 0, 0);
         setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
+    public void goToEncoderPositionREL(int leftFrontPosition, int leftRearPosition, int rightRearPosition, int rightFrontPosition, double power) {
+        goToEncoderPositionABS(
+                (int)(leftFrontPosition + leftFront.getCurrentPosition()),
+                (int)(leftRearPosition + leftRear.getCurrentPosition()),
+                (int)(rightRearPosition + rightRear.getCurrentPosition()),
+                (int)(rightFrontPosition + rightFront.getCurrentPosition()),
+                power
+        );
+    }
+
+    public void brakeALL() {
+        leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     @Override
