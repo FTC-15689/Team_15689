@@ -64,8 +64,8 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="!Basic: Omni Linear OpMode", group="Linear Opmode")
-public class BasicOmniOpMode_Linear extends LinearOpMode {
+@TeleOp(name="!Basic: Mecanum Linear OpMode", group="Linear Opmode")
+public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
     private ElapsedTime runtime = new ElapsedTime();
