@@ -29,7 +29,7 @@
 
 package org.firstinspires.ftc.teamcode.drive.auto;
 
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.TICKS_PER_INCH;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.encoderInchesToTicks;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -40,25 +40,25 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 /**
  * This file illustrates the concept of driving a path based on encoder counts.
  * The code is structured as a LinearOpMode
- *
+ * <p>
  * The code REQUIRES that you DO have encoders on the wheels,
  *   otherwise you would use: RobotAutoDriveByTime;
- *
+ * <p>
  *  This code ALSO requires that the drive Motors have been configured such that a positive
  *  power command moves them forward, and causes the encoders to count UP.
- *
+ * <p>
  *   The desired path in this example is:
  *   - Drive forward for 48 inches
  *   - Spin right for 12 Inches
  *   - Drive Backward for 24 inches
  *   - Stop and close the claw.
- *
+ * <p>
  *  The code is written using a method called: encoderDrive(speed, leftInches, rightInches, timeoutS)
  *  that performs the actual movement.
  *  This method assumes that each movement is relative to the last stopping place.
  *  There are other ways to perform encoder based moves, but this method is probably the simplest.
  *  This code uses the RUN_TO_POSITION mode to enable the Motor controllers to generate the run profile
- *
+ * <p>
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
@@ -94,7 +94,7 @@ public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
             // Step through each leg of the path,
             // Note: Reverse movement is obtained by setting a negative distance (not speed)
             encoderDrive(DRIVE_SPEED, 10, 10);  // S1: Forward 47 Inches
-//            encoderDrive(TURN_SPEED, 12, -12);  // S2: Turn Right 12 Inches
+            encoderDrive(TURN_SPEED, 12, -12);  // S2: Turn Right 12 Inches
             encoderDrive(DRIVE_SPEED, -10, -10);  // S3: Reverse 24 Inches
         } catch (Exception e) {
             String err = e.toString();
@@ -102,7 +102,7 @@ public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
             telemetry.addData("Path failed with exception:", err);
             telemetry.update();
 
-            sleep(2000);
+            sleep(5000);
         }
 
         telemetry.addData("Path", "Complete");
@@ -125,8 +125,8 @@ public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
         // Ensure that the opmode is still active
         if (opModeIsActive()) {
             // get how many encoder ticks to move (in/in * ticks)
-            int ticksToMoveLeft = (int)(leftInches * TICKS_PER_INCH);
-            int ticksToMoveRight = (int)(rightInches * TICKS_PER_INCH);
+            int ticksToMoveLeft = encoderInchesToTicks(leftInches);
+            int ticksToMoveRight = encoderInchesToTicks(rightInches);
 
             telemetry.addData("Moving by", "%d %d", ticksToMoveLeft, ticksToMoveRight);
             telemetry.update();
@@ -138,9 +138,13 @@ public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
                     ticksToMoveRight,
                     speed
             );
+
+            mecanumDriver.waitForIdle();
+
+            mecanumDriver.setMotorPowers(0, 0, 0, 0);
         }
         mecanumDriver.brakeALL();
 
-        sleep(1000);
+        sleep(250);
     }
 }

@@ -68,8 +68,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     private static final TrajectoryVelocityConstraint VEL_CONSTRAINT = getVelocityConstraint(MAX_VEL, MAX_ANG_VEL, TRACK_WIDTH);
     private static final TrajectoryAccelerationConstraint ACCEL_CONSTRAINT = getAccelerationConstraint(MAX_ACCEL);
 
-    private final TrajectoryFollower follower;
-
     private final DcMotorEx leftFront;
     private final DcMotorEx leftRear;
     private final DcMotorEx rightRear;
@@ -85,7 +83,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     public MecanumDrive(HardwareMap hardwareMap) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
 
-        follower = new HolonomicPIDVAFollower(TRANSLATIONAL_PID, TRANSLATIONAL_PID, HEADING_PID,
+        TrajectoryFollower follower = new HolonomicPIDVAFollower(TRANSLATIONAL_PID, TRANSLATIONAL_PID, HEADING_PID,
                 new Pose2d(0.5, 0.5, Math.toRadians(5.0)), 0.5);
 
         LynxModuleUtil.ensureMinimumFirmwareVersion(hardwareMap);
@@ -96,7 +94,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
             module.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         }
 
-        // TODO: adjust the names of the following hardware devices to match your configuration
         imu = hardwareMap.get(IMU.class, "imu");
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
                 DriveConstants.LOGO_FACING_DIR, DriveConstants.USB_FACING_DIR));
@@ -125,15 +122,12 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
             setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MOTOR_VELO_PID);
         }
 
-        // TODO: reverse any motors using DcMotor.setDirection()
+        // reverse some motor directions
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
 
         List<Integer> lastTrackingEncPositions = new ArrayList<>();
         List<Integer> lastTrackingEncVels = new ArrayList<>();
-
-        // TODO: if desired, use setLocalizer() to change the localization method
-        // setLocalizer(new StandardTrackingWheelLocalizer(hardwareMap, lastTrackingEncPositions, lastTrackingEncVels));
 
         trajectorySequenceRunner = new TrajectorySequenceRunner(
                 follower, HEADING_PID, batteryVoltageSensor,
@@ -159,6 +153,10 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
                 VEL_CONSTRAINT, ACCEL_CONSTRAINT,
                 MAX_ANG_VEL, MAX_ANG_ACCEL
         );
+    }
+
+    public TrajectorySequenceBuilder trajectorySequenceBuilder() {
+        return trajectorySequenceBuilder(getPoseEstimate());
     }
 
     public void turnAsync(double angle) {
@@ -258,6 +256,9 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         setDrivePower(vel);
     }
 
+    /**
+     * @return Wheel positions in an int list: (left Front, left Rear, right Rear, right Front)
+     */
     @NonNull
     @Override
     public List<Double> getWheelPositions() {
@@ -305,27 +306,35 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         rightFront.setPower(rf);
     }
 
-    public void goToEncoderPositionABS(int leftFrontPosition, int leftRearPosition, int rightRearPosition, int rightFrontPosition, double power) {
-        leftFront.setTargetPosition(leftFrontPosition);
-        leftRear.setTargetPosition(leftRearPosition);
-        rightRear.setTargetPosition(rightRearPosition);
-        rightFront.setTargetPosition(rightFrontPosition);
-        setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        setMotorPowers(power, power, power, power);
-        waitForIdle();
+    public void setTargets(int leftFrontT, int leftRearT, int rightRearT, int rightFrontT) {
+        leftFront.setTargetPosition(leftFrontT);
+        leftRear.setTargetPosition(leftRearT);
+        rightRear.setTargetPosition(rightRearT);
+        rightFront.setTargetPosition(rightFrontT);
+    }
 
-        setMotorPowers(0, 0, 0, 0);
-        setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    /**
+     * Resets the encoders to 0 and stops the robot
+     */
+    public void resetEncoders() {
+        setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     }
 
     public void goToEncoderPositionREL(int leftFrontPosition, int leftRearPosition, int rightRearPosition, int rightFrontPosition, double power) {
-        goToEncoderPositionABS(
-                leftFrontPosition + leftFront.getCurrentPosition(),
-                leftRearPosition + leftRear.getCurrentPosition(),
-                rightRearPosition + rightRear.getCurrentPosition(),
-                rightFrontPosition + rightFront.getCurrentPosition(),
-                power
+        // reset encoders
+        resetEncoders();
+
+        setTargets(
+                leftFrontPosition,
+                leftRearPosition,
+                rightRearPosition,
+                rightFrontPosition
         );
+
+        // set the encoder mode
+        setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        setMotorPowers(power, power, power, power);
     }
 
     public void brakeALL() {
@@ -354,5 +363,9 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
 
     public static TrajectoryAccelerationConstraint getAccelerationConstraint(double maxAccel) {
         return new ProfileAccelerationConstraint(maxAccel);
+    }
+
+    public static double inchesToMM(double inches) {
+        return inches * 25.4;
     }
 }

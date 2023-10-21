@@ -45,7 +45,7 @@ public class DriveConstants {
      * convenience. Make sure to exclude any gear ratio included in MOTOR_CONFIG from GEAR_RATIO.
      */
     public static double WHEEL_RADIUS = 3.779528 / 2; // in, (1in = 25.4mm)
-    public static double GEAR_RATIO = 40; // output (wheel) speed / input (motor) speed, ex 1:40 -> 40 / 1
+    public static double GEAR_RATIO = (double) 1 / 40; // output (wheel) speed / input (motor) speed, ex 40:1 -> 1/40
     public static double TRACK_WIDTH = 1; // in
     public static double TICKS_PER_INCH = (TICKS_PER_REV * GEAR_RATIO) / (WHEEL_RADIUS * 2 * 3.1415); // Geared ticks per revolution / Circumference
 
@@ -82,6 +82,9 @@ public class DriveConstants {
 
     public static double encoderTicksToInches(double ticks) {
         return WHEEL_RADIUS * 2 * Math.PI * GEAR_RATIO * ticks / TICKS_PER_REV;
+    }
+    public static int encoderInchesToTicks(double inches) {
+        return (int) ((inches * TICKS_PER_REV) / (WHEEL_RADIUS * 2 * Math.PI * GEAR_RATIO));
     }
 
     public static double rpmToVelocity(double rpm) {
