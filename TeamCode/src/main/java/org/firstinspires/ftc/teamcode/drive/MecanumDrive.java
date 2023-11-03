@@ -368,4 +368,11 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     public static double inchesToMM(double inches) {
         return inches * 25.4;
     }
+
+    public static TrajectorySequence genPath(int path_id) {
+        switch (path_id) {
+            default:
+                return
+        }
+    }
 }

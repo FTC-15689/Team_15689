@@ -79,13 +79,22 @@ public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
         telemetry.update();
 
         mecanumDriver = new MecanumDrive(hardwareMap);
+        CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap);
+        CapstonePipeline.CapstonePosition capstonePosition;
 
         // Wait for the game to start (Display Gyro value while waiting)
-        while (opModeInInit()) {
+       /* while (opModeInInit()) {
             telemetry.addData(">", "Robot Heading = %4.0f", mecanumDriver.getRawExternalHeading());
             telemetry.update();
+        }*/
+        while(opModeInInit()){
+            capstonePosition = camera.getPosition();
+            telemetry.addData("Current Position",capstonePosition);
+            telemetry.addData("Left Analysis",camera.getAnalysis()[0]);
+            telemetry.addData("Center Analysis",camera.getAnalysis()[1]);;
+            telemetry.addData("Right Analysis",camera.getAnalysis()[2]);
+            telemetry.update();
         }
-
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
