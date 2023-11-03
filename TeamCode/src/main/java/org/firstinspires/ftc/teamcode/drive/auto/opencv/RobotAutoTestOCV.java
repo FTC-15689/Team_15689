@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.teamcode.drive.auto;
+package org.firstinspires.ftc.teamcode.drive.auto.opencv;
 
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.encoderInchesToTicks;
 
@@ -36,6 +36,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.auto.CapstoneDetectionCamera;
+import org.firstinspires.ftc.teamcode.drive.auto.CapstonePipeline;
 
 /**
  * This file illustrates the concept of driving a path based on encoder counts.
@@ -63,14 +65,14 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="!Robot: Auto Drive By Encoder", group="Robot")
-public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
+@Autonomous(name = "!Robot: Auto Drive By Encoder", group = "Robot")
+public class RobotAutoTestOCV extends LinearOpMode {
 
     /* Declare OpMode members. */
     private MecanumDrive mecanumDriver;
-    private final ElapsedTime     runtime = new ElapsedTime();
-    static final double     DRIVE_SPEED             = 0.6;
-    static final double     TURN_SPEED              = 0.5;
+    private final ElapsedTime runtime = new ElapsedTime();
+    static final double DRIVE_SPEED = 0.6;
+    static final double TURN_SPEED = 0.5;
 
     @Override
     public void runOpMode() {
@@ -82,16 +84,11 @@ public class RobotAutoDriveByEncoder_Linear extends LinearOpMode {
         CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap);
         CapstonePipeline.CapstonePosition capstonePosition;
 
-        // Wait for the game to start (Display Gyro value while waiting)
-       /* while (opModeInInit()) {
-            telemetry.addData(">", "Robot Heading = %4.0f", mecanumDriver.getRawExternalHeading());
-            telemetry.update();
-        }*/
         while(opModeInInit()){
             capstonePosition = camera.getPosition();
             telemetry.addData("Current Position",capstonePosition);
             telemetry.addData("Left Analysis",camera.getAnalysis()[0]);
-            telemetry.addData("Center Analysis",camera.getAnalysis()[1]);;
+            telemetry.addData("Center Analysis",camera.getAnalysis()[1]);
             telemetry.addData("Right Analysis",camera.getAnalysis()[2]);
             telemetry.update();
         }

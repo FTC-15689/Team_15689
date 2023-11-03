@@ -1,5 +1,17 @@
 package org.firstinspires.ftc.teamcode.drive;
 
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ACCEL;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ANG_ACCEL;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ANG_VEL;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_VEL;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MOTOR_VELO_PID;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.RUN_USING_ENCODER;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.TRACK_WIDTH;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.encoderTicksToInches;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kA;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kStatic;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -8,6 +20,7 @@ import com.acmerobotics.roadrunner.drive.DriveSignal;
 import com.acmerobotics.roadrunner.followers.HolonomicPIDVAFollower;
 import com.acmerobotics.roadrunner.followers.TrajectoryFollower;
 import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.acmerobotics.roadrunner.trajectory.Trajectory;
 import com.acmerobotics.roadrunner.trajectory.TrajectoryBuilder;
 import com.acmerobotics.roadrunner.trajectory.constraints.AngularVelocityConstraint;
@@ -36,18 +49,6 @@ import org.firstinspires.ftc.teamcode.util.LynxModuleUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ACCEL;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ANG_ACCEL;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ANG_VEL;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_VEL;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MOTOR_VELO_PID;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.RUN_USING_ENCODER;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.TRACK_WIDTH;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.encoderTicksToInches;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kA;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kStatic;
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
 
 /*
  * Simple mecanum drive hardware implementation for REV hardware.
@@ -275,7 +276,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     }
 
     /**
-     *
      * @param wheelNum Index of the wheel, (0:lf, 1:lr, 2:rr, 3:rf)
      * @return encoder position of the wheel
      */
@@ -365,14 +365,31 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         return new ProfileAccelerationConstraint(maxAccel);
     }
 
-    public static double inchesToMM(double inches) {
-        return inches * 25.4;
-    }
-
-    public static TrajectorySequence genPath(int path_id) {
+    /**
+     * @param path_id valid ids:
+     *                <p>
+     *                0 - Park as RED
+     *                <p>
+     *                1 - Park as BLUE
+     * @return The built trajectory sequence
+     */
+    public TrajectorySequence genPath(int path_id) {
         switch (path_id) {
+            case 0:
+                // Park as RED
+                return trajectorySequenceBuilder(new Pose2d(61.00, -36.00, Math.toRadians(180.00)))
+                        .splineTo(new Vector2d(9.10, -35.31), Math.toRadians(179.24))
+                        .lineTo(new Vector2d(10.70, 64.57))
+                        .build();
+            case 1:
+                // Park as BLUE
+                return trajectorySequenceBuilder(new Pose2d(-63.00, -34.00, Math.toRadians(0.00)))
+                        .splineTo(new Vector2d(-13.18, -34.00), Math.toRadians(0.16))
+                        .lineTo(new Vector2d(-14.20, 69.52))
+                        .build();
             default:
-                return
+                // Do nothing
+                return trajectorySequenceBuilder(new Pose2d(0, 0, 0.0)).build();
         }
     }
 }

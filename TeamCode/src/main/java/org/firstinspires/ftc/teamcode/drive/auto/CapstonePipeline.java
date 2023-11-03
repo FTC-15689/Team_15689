@@ -10,8 +10,10 @@ import org.openftc.easyopencv.OpenCvPipeline;
 
 public class CapstonePipeline extends OpenCvPipeline {
 
-    public enum CapstonePosition
-    {
+    /*
+    Confidence of a position?
+     */
+    public enum CapstonePosition {
         LEFT,
         CENTER,
         RIGHT
