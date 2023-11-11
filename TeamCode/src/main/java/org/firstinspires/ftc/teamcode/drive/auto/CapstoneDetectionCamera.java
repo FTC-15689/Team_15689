@@ -16,7 +16,7 @@ public class CapstoneDetectionCamera {
     CapstonePipeline pipeline;
     Telemetry telemetry;
 
-    public CapstoneDetectionCamera(HardwareMap hardwareMap) {
+    public CapstoneDetectionCamera(HardwareMap hardwareMap, int color_index) {
         webcam1 = hardwareMap.get(WebcamName.class, "Webcam 1");
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
@@ -24,6 +24,7 @@ public class CapstoneDetectionCamera {
         camera = OpenCvCameraFactory.getInstance().createSwitchableWebcam(cameraMonitorViewId, webcam1);
 
         pipeline = new CapstonePipeline();
+        pipeline.color_index = color_index;  // set to r: 0, g: 1, b: 2
         camera.setPipeline(pipeline);
 
 

@@ -19,6 +19,8 @@ public class CapstonePipeline extends OpenCvPipeline {
         RIGHT
     }
 
+    public int color_index = 0;
+
     final Scalar RED = new Scalar(255, 0, 0);
     final Scalar GREEN = new Scalar(0, 255, 0);
     final Scalar BLUE = new Scalar(0, 0, 255);
@@ -26,7 +28,7 @@ public class CapstonePipeline extends OpenCvPipeline {
     // TODO: Check Directions
     final Point LEFT_TOPLEFT_ANCHOR_POINT = new Point(0, 0);
 
-    final int REGION_WIDTH = 1280/3;
+    final int REGION_WIDTH = 1280 / 3;
     final int REGION_HEIGHT = 720;
 
     final Point CENTER_TOPLEFT_ANCHOR_POINT = new Point(LEFT_TOPLEFT_ANCHOR_POINT.x + REGION_WIDTH, 0);
@@ -64,15 +66,15 @@ public class CapstonePipeline extends OpenCvPipeline {
 
     public volatile CapstonePosition position = CapstonePosition.LEFT;
 
-    void inputToCb(Mat input)
-    {
-        Imgproc.cvtColor(input, leftYCrCb, Imgproc.COLOR_RGB2YCrCb);
+    void inputToCb(Mat input) {
+        // TODO: Invert channel
+        Imgproc.cvtColor(input, leftYCrCb, Imgproc.COLOR_RGB2BGR);
         Core.extractChannel(leftYCrCb, leftCr, 1);
 
-        Imgproc.cvtColor(input, centerYCrCb, Imgproc.COLOR_RGB2YCrCb);
+        Imgproc.cvtColor(input, centerYCrCb, Imgproc.COLOR_RGB2BGR);
         Core.extractChannel(centerYCrCb, centerCr, 1);
 
-        Imgproc.cvtColor(input, rightYCrCb, Imgproc.COLOR_RGB2YCrCb);
+        Imgproc.cvtColor(input, rightYCrCb, Imgproc.COLOR_RGB2BGR);
         Core.extractChannel(rightYCrCb, rightCr, 1);
     }
 
@@ -91,19 +93,15 @@ public class CapstonePipeline extends OpenCvPipeline {
 
         inputToCb(input);
 
-        leftAvg = (int) Core.mean(leftRegionCb).val[0];
-        centerAvg = (int) Core.mean(centerRegionCb).val[0];
-        rightAvg = (int) Core.mean(rightRegionCb).val[0];
+        leftAvg = (int) Core.mean(leftRegionCb).val[color_index];
+        centerAvg = (int) Core.mean(centerRegionCb).val[color_index];
+        rightAvg = (int) Core.mean(rightRegionCb).val[color_index];
 
         position = CapstonePosition.LEFT;
 
-        if(centerAvg > leftAvg && centerAvg > rightAvg)
-        {
+        if (centerAvg > leftAvg && centerAvg > rightAvg) {
             position = CapstonePosition.CENTER;
-        }
-
-        else if(rightAvg > leftAvg && rightAvg > centerAvg)
-        {
+        } else if (rightAvg > leftAvg && rightAvg > centerAvg) {
             position = CapstonePosition.RIGHT;
         }
 

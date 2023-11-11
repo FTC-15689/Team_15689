@@ -65,7 +65,7 @@ import org.firstinspires.ftc.teamcode.drive.auto.CapstonePipeline;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name = "!Robot: Auto Drive By Encoder", group = "Robot")
+@Autonomous(name = "!Robot: Auto Test Capstone", group = "Robot")
 public class RobotAutoTestOCV extends LinearOpMode {
 
     /* Declare OpMode members. */
@@ -81,7 +81,7 @@ public class RobotAutoTestOCV extends LinearOpMode {
         telemetry.update();
 
         mecanumDriver = new MecanumDrive(hardwareMap);
-        CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap);
+        CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap, 0);
         CapstonePipeline.CapstonePosition capstonePosition;
 
         while(opModeInInit()){
