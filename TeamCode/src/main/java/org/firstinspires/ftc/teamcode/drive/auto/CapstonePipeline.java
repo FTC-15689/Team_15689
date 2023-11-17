@@ -50,59 +50,75 @@ public class CapstonePipeline extends OpenCvPipeline {
     );
 
     Mat leftRegionCb;
-    Mat leftYCrCb = new Mat();
-    Mat leftCr = new Mat();
     int leftAvg;
 
     Mat centerRegionCb;
-    Mat centerYCrCb = new Mat();
-    Mat centerCr = new Mat();
     int centerAvg;
 
     Mat rightRegionCb;
-    Mat rightYCrCb = new Mat();
-    Mat rightCr = new Mat();
     int rightAvg;
 
     public volatile CapstonePosition position = CapstonePosition.LEFT;
 
-    void inputToCb(Mat input) {
-        // TODO: Invert channel
-        Imgproc.cvtColor(input, leftYCrCb, Imgproc.COLOR_RGB2BGR);
-        Core.extractChannel(leftYCrCb, leftCr, 1);
-
-        Imgproc.cvtColor(input, centerYCrCb, Imgproc.COLOR_RGB2BGR);
-        Core.extractChannel(centerYCrCb, centerCr, 1);
-
-        Imgproc.cvtColor(input, rightYCrCb, Imgproc.COLOR_RGB2BGR);
-        Core.extractChannel(rightYCrCb, rightCr, 1);
-    }
+//    /*
+//     * This function takes the RGB frame, stores each color channel as an array in <side>Cr
+//     */
+//    void inputToCb(Mat input) {
+//        // TODO: Invert channel
+//        Imgproc.cvtColor(input, leftYCrCb, Imgproc.COLOR_RGB2BGR);
+//        Core.extractChannel(leftYCrCb, leftCr, 1);
+//
+//        Imgproc.cvtColor(input, centerYCrCb, Imgproc.COLOR_RGB2BGR);
+//        Core.extractChannel(centerYCrCb, centerCr, 1);
+//
+//        Imgproc.cvtColor(input, rightYCrCb, Imgproc.COLOR_RGB2BGR);
+//        Core.extractChannel(rightYCrCb, rightCr, 1);
+//    }
 
     @Override
-    public void init(Mat firstFrame)
-    {
-        inputToCb(firstFrame);
-
-        leftRegionCb = leftCr.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
-        centerRegionCb = leftCr.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
-        rightRegionCb = leftCr.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
+    public void init(Mat firstFrame) {
+        leftRegionCb = firstFrame.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
+        centerRegionCb = firstFrame.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
+        rightRegionCb = firstFrame.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
     }
 
     @Override
     public Mat processFrame(Mat input) {
+        Mat target_channel = new Mat();
+        Core.extractChannel(input, target_channel, color_index);
 
-        inputToCb(input);
+        leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
+        centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
+        rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
 
-        leftAvg = (int) Core.mean(leftRegionCb).val[color_index];
-        centerAvg = (int) Core.mean(centerRegionCb).val[color_index];
-        rightAvg = (int) Core.mean(rightRegionCb).val[color_index];
+        leftAvg = (int) Core.mean(leftRegionCb).val[0];
+        centerAvg = (int) Core.mean(centerRegionCb).val[0];
+        rightAvg = (int) Core.mean(rightRegionCb).val[0];
 
-        position = CapstonePosition.LEFT;
+        if (color_index == -1) {
+            // find the avg farthest from the other two
+            int total_avg = (leftAvg + centerAvg + rightAvg) / 3;
+            int left_diff = Math.abs(total_avg - leftAvg);
+            int center_diff = Math.abs(total_avg - centerAvg);
+            int right_diff = Math.abs(total_avg - rightAvg);
 
-        if (centerAvg > leftAvg && centerAvg > rightAvg) {
-            position = CapstonePosition.CENTER;
-        } else if (rightAvg > leftAvg && rightAvg > centerAvg) {
-            position = CapstonePosition.RIGHT;
+            int max_diff = Math.max(left_diff, Math.max(center_diff, right_diff));
+
+            if (max_diff == left_diff) {
+                position = CapstonePosition.LEFT;
+            } else if (max_diff == center_diff) {
+                position = CapstonePosition.CENTER;
+            } else {
+                position = CapstonePosition.RIGHT;
+            }
+        } else {
+            position = CapstonePosition.LEFT;
+
+            if (centerAvg > leftAvg && centerAvg > rightAvg) {
+                position = CapstonePosition.CENTER;
+            } else if (rightAvg > leftAvg && rightAvg > centerAvg) {
+                position = CapstonePosition.RIGHT;
+            }
         }
 
         Imgproc.rectangle(
@@ -132,8 +148,7 @@ public class CapstonePipeline extends OpenCvPipeline {
         return input;
     }
 
-    public int[] getAnalysis()
-    {
+    public int[] getAnalysis() {
         return new int[]{leftAvg, centerAvg, rightAvg};
     }
 

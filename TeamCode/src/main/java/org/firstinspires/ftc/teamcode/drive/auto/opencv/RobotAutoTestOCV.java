@@ -81,7 +81,7 @@ public class RobotAutoTestOCV extends LinearOpMode {
         telemetry.update();
 
         mecanumDriver = new MecanumDrive(hardwareMap);
-        CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap, 0);
+        CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap, -1);
         CapstonePipeline.CapstonePosition capstonePosition;
 
         while(opModeInInit()){

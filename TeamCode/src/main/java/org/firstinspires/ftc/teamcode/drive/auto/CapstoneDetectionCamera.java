@@ -44,13 +44,11 @@ public class CapstoneDetectionCamera {
         );
     }
 
-    public CapstonePipeline.CapstonePosition getPosition()
-    {
+    public CapstonePipeline.CapstonePosition getPosition() {
         return pipeline.position;
     }
 
-    public int[] getAnalysis()
-    {
+    public int[] getAnalysis() {
         return pipeline.getAnalysis();
     }
 }
