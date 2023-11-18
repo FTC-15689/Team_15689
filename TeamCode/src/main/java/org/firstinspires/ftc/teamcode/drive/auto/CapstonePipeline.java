@@ -8,18 +8,23 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class CapstonePipeline extends OpenCvPipeline {
 
     /*
     Confidence of a position?
      */
     public enum CapstonePosition {
-        LEFT,
-        CENTER,
-        RIGHT
+        LEFT, CENTER, RIGHT
     }
 
-    public int color_index = 0;
+    public enum ColorMode {
+        RED, GREEN, BLUE, ANY
+    }
+
+    public volatile ColorMode cmode = ColorMode.ANY;
 
     final Scalar RED = new Scalar(255, 0, 0);
     final Scalar GREEN = new Scalar(0, 255, 0);
@@ -50,13 +55,13 @@ public class CapstonePipeline extends OpenCvPipeline {
     );
 
     Mat leftRegionCb;
-    int leftAvg;
+    double leftAvg;
 
     Mat centerRegionCb;
-    int centerAvg;
+    double centerAvg;
 
     Mat rightRegionCb;
-    int rightAvg;
+    double rightAvg;
 
     public volatile CapstonePosition position = CapstonePosition.LEFT;
 
@@ -82,27 +87,65 @@ public class CapstonePipeline extends OpenCvPipeline {
         rightRegionCb = firstFrame.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
     }
 
+    public double maxDiff(List<Double> regions) {
+        double avg = 0;
+        for (Double sect : regions) {
+            avg += sect;
+        }
+
+        avg /= regions.size();
+
+        double maxDiff = 0;
+        for (Double sect : regions) {
+            double diff = Math.abs(avg - sect);
+
+            if (diff > maxDiff) {
+                maxDiff = diff;
+            }
+        }
+
+        return maxDiff;
+    }
+
     @Override
     public Mat processFrame(Mat input) {
-        Mat target_channel = new Mat();
-        Core.extractChannel(input, target_channel, color_index);
+        int color_index;
+        switch (cmode) {
+            case RED:
+                color_index = 0;
+                break;
+            case GREEN:
+                color_index = 1;
+                break;
+            case BLUE:
+                color_index = 2;
+                break;
+            default:
+                color_index = -1;
+        }
+        if (cmode != ColorMode.ANY) {
+            Core.extractChannel(input, input, color_index);
+        }
 
         leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
         centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
         rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
 
-        leftAvg = (int) Core.mean(leftRegionCb).val[0];
-        centerAvg = (int) Core.mean(centerRegionCb).val[0];
-        rightAvg = (int) Core.mean(rightRegionCb).val[0];
+        Scalar leftMean = Core.mean(leftRegionCb);
+        Scalar centerMean = Core.mean(centerRegionCb);
+        Scalar rightMean = Core.mean(rightRegionCb);
 
-        if (color_index == -1) {
+        leftAvg = leftMean.val[0];
+        centerAvg = centerMean.val[0];
+        rightAvg = rightMean.val[0];
+
+        if (cmode == ColorMode.ANY) { // TODO: Make this work with all channels
             // find the avg farthest from the other two
-            int total_avg = (leftAvg + centerAvg + rightAvg) / 3;
-            int left_diff = Math.abs(total_avg - leftAvg);
-            int center_diff = Math.abs(total_avg - centerAvg);
-            int right_diff = Math.abs(total_avg - rightAvg);
+            double total_avg = (leftAvg + centerAvg + rightAvg) / 3.0;
+            double left_diff = Math.abs(total_avg - leftAvg);
+            double center_diff = Math.abs(total_avg - centerAvg);
 
-            int max_diff = Math.max(left_diff, Math.max(center_diff, right_diff));
+            int max_diff = (int) maxDiff(Arrays.asList(leftAvg, centerAvg, rightAvg));
 
             if (max_diff == left_diff) {
                 position = CapstonePosition.LEFT;
@@ -121,35 +164,34 @@ public class CapstonePipeline extends OpenCvPipeline {
             }
         }
 
-        Imgproc.rectangle(
+        // draw visual bounds on the image
+        Imgproc.rectangle( // LEFT
                 input,
                 LEFT_TOPLEFT_ANCHOR_POINT,
                 LEFT_BOTTOMRIGHT_ANCHOR_POINT,
                 RED,
-                2
+                position == CapstonePosition.LEFT ? 10 : 2
         );
-
-        Imgproc.rectangle(
+        Imgproc.rectangle( // CENTER
                 input,
                 CENTER_TOPLEFT_ANCHOR_POINT,
                 CENTER_BOTTOMRIGHT_ANCHOR_POINT,
                 GREEN,
-                2
+                position == CapstonePosition.CENTER ? 10 : 2
         );
-
-        Imgproc.rectangle(
+        Imgproc.rectangle( // RIGHT
                 input,
                 RIGHT_TOPLEFT_ANCHOR_POINT,
                 RIGHT_BOTTOMRIGHT_ANCHOR_POINT,
                 BLUE,
-                2
+                position == CapstonePosition.RIGHT ? 10 : 2
         );
 
         return input;
     }
 
-    public int[] getAnalysis() {
-        return new int[]{leftAvg, centerAvg, rightAvg};
+    public double[] getAnalysis() {
+        return new double[]{leftAvg, centerAvg, rightAvg};
     }
 
 }

@@ -48,7 +48,7 @@ public class CapstoneDetectionCamera {
         return pipeline.position;
     }
 
-    public int[] getAnalysis() {
+    public double[] getAnalysis() {
         return pipeline.getAnalysis();
     }
 }
