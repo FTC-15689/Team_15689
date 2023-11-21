@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.auto;
 
+import android.annotation.SuppressLint;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
@@ -13,18 +15,30 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 public class CapstoneDetectionCamera {
     WebcamName webcam1;
     OpenCvCamera camera;
-    CapstonePipeline pipeline;
+    public CapstonePipeline pipeline;
     Telemetry telemetry;
 
     public CapstoneDetectionCamera(HardwareMap hardwareMap, int color_index) {
         webcam1 = hardwareMap.get(WebcamName.class, "Webcam 1");
 
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        @SuppressLint("DiscouragedApi") int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
 
         camera = OpenCvCameraFactory.getInstance().createSwitchableWebcam(cameraMonitorViewId, webcam1);
 
         pipeline = new CapstonePipeline();
-        pipeline.color_index = color_index;  // set to r: 0, g: 1, b: 2
+        switch (color_index) {
+            case 0:
+                pipeline.cmode = CapstonePipeline.ColorMode.RED;
+                break;
+            case 1:
+                pipeline.cmode = CapstonePipeline.ColorMode.GREEN;
+                break;
+            case 2:
+                pipeline.cmode = CapstonePipeline.ColorMode.BLUE;
+                break;
+            default:
+                pipeline.cmode = CapstonePipeline.ColorMode.ANY;
+        }
         camera.setPipeline(pipeline);
 
 

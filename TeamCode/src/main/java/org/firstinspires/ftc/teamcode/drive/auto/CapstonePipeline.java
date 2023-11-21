@@ -10,8 +10,6 @@ import org.openftc.easyopencv.OpenCvPipeline;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.Hashtable;
 import java.util.List;
 
 public class CapstonePipeline extends OpenCvPipeline {
@@ -59,21 +57,7 @@ public class CapstonePipeline extends OpenCvPipeline {
     double rightAvg;
 
     public volatile CapstonePosition position = CapstonePosition.LEFT;
-
-//    /*
-//     * This function takes the RGB frame, stores each color channel as an array in <side>Cr
-//     */
-//    void inputToCb(Mat input) {
-//        // TODO: Invert channel
-//        Imgproc.cvtColor(input, leftYCrCb, Imgproc.COLOR_RGB2BGR);
-//        Core.extractChannel(leftYCrCb, leftCr, 1);
-//
-//        Imgproc.cvtColor(input, centerYCrCb, Imgproc.COLOR_RGB2BGR);
-//        Core.extractChannel(centerYCrCb, centerCr, 1);
-//
-//        Imgproc.cvtColor(input, rightYCrCb, Imgproc.COLOR_RGB2BGR);
-//        Core.extractChannel(rightYCrCb, rightCr, 1);
-//    }
+    public volatile ColorMode bestChannel = ColorMode.ANY;
 
     @Override
     public void init(Mat firstFrame) {
@@ -83,16 +67,16 @@ public class CapstonePipeline extends OpenCvPipeline {
     }
 
     public double maxDiff(List<Double> regions) {
-        double avg = 0;
+        double total_avg = 0;
         for (Double sect : regions) {
-            avg += sect;
+            total_avg += sect;
         }
 
-        avg /= regions.size();
+        total_avg /= regions.size();
 
         double maxDiff = 0;
-        for (Double sect : regions) {
-            double diff = Math.abs(avg - sect);
+        for (Double region : regions) {
+            double diff = Math.abs(total_avg - region);
 
             if (diff > maxDiff) {
                 maxDiff = diff;
@@ -100,6 +84,29 @@ public class CapstonePipeline extends OpenCvPipeline {
         }
 
         return maxDiff;
+    }
+
+    public double calcMeans(Mat input) {
+        leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
+        centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
+        rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
+
+        Scalar leftMean = Core.mean(leftRegionCb);
+        Scalar centerMean = Core.mean(centerRegionCb);
+        Scalar rightMean = Core.mean(rightRegionCb);
+
+        leftAvg = leftMean.val[0];
+        centerAvg = centerMean.val[0];
+        rightAvg = rightMean.val[0];
+
+        return Math.max(leftAvg, Math.max(centerAvg, rightAvg));
+    }
+
+    private Mat extractChannel(Mat src, int index) {
+        Mat tmp = new Mat();
+        Core.extractChannel(src, tmp, index);
+
+        return tmp;
     }
 
     @Override
@@ -122,79 +129,67 @@ public class CapstonePipeline extends OpenCvPipeline {
             Core.extractChannel(input, input, color_index);
         }
 
-        if (cmode == ColorMode.ANY) { // TODO: Make this work with all channels
+        if (cmode == ColorMode.ANY) {
+            // convert the bgr
+            Imgproc.cvtColor(input, input, Imgproc.COLOR_BGRA2BGR);
+
             // create a list of the channels and an empty list to store the differences of each channel
-            List<Mat> channels = new ArrayList<>();
-            Core.split(input, channels);
-            List<Dictionary<Integer, Double>> diffs = new ArrayList<>(channels.size());
+            double redMean = calcMeans(extractChannel(input, 0));
+            double greenMean = calcMeans(extractChannel(input, 1));
+            double blueMean = calcMeans(extractChannel(input, 2));
 
-            // iterate over channels and find the difference between the average of the channel and the average of the other channels
-            for (Mat channel : channels) {
-                leftRegionCb = channel.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
-                centerRegionCb = channel.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
-                rightRegionCb = channel.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
+            double maxMean = Math.max(redMean, Math.max(greenMean, blueMean));
 
-                Scalar leftMean = Core.mean(leftRegionCb);
-                Scalar centerMean = Core.mean(centerRegionCb);
-                Scalar rightMean = Core.mean(rightRegionCb);
+            Mat targetChannel;
 
-                leftAvg = leftMean.val[0];
-                centerAvg = centerMean.val[0];
-                rightAvg = rightMean.val[0];
-
-                double total_avg = (leftAvg + centerAvg + rightAvg) / 3.0;
-                double left_diff = Math.abs(total_avg - leftAvg);
-                double center_diff = Math.abs(total_avg - centerAvg);
-                double right_diff = Math.abs(total_avg - rightAvg);
-
-                double max_diff = maxDiff(Arrays.asList(left_diff, center_diff, right_diff));
-
-                if (max_diff == left_diff) {
-                    diffs.add(new Hashtable<Integer, Double>() {{
-                        put(0, left_diff);
-                    }});
-                } else if (max_diff == center_diff) {
-                    diffs.add(new Hashtable<Integer, Double>() {{
-                        put(1, center_diff);
-                    }});
-                } else {
-                    diffs.add(new Hashtable<Integer, Double>() {{
-                        put(2, right_diff);
-                    }});
-                }
+            if (maxMean == redMean) {
+                targetChannel = extractChannel(input, 0);
+                bestChannel = ColorMode.RED;
+            } else if (maxMean == greenMean) {
+                targetChannel = extractChannel(input, 1);
+                bestChannel = ColorMode.GREEN;
+            } else if (maxMean == blueMean) {
+                targetChannel = extractChannel(input, 2);
+                bestChannel = ColorMode.BLUE;
+            } else {
+                targetChannel = extractChannel(input, 2);
+                bestChannel = ColorMode.ANY;
             }
 
-            // the diffs list now contains a list of dictionaries, each dictionary containing the difference of the channel at the index of the dictionary
-            // iterate over the diffs list and find the channel with the biggest difference
-            double max_diff = 0;
-            int max_channel_index = 0;
+            leftRegionCb = targetChannel.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
+            centerRegionCb = targetChannel.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
+            rightRegionCb = targetChannel.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
 
-            for (Dictionary<Integer, Double> diff : diffs) {
-                // the dictionary is a single k, v pair
-                int channel_index = diff.keys().nextElement();
-                double channel_diff = diff.get(channel_index);
+            Scalar leftMean = Core.mean(leftRegionCb);
+            Scalar centerMean = Core.mean(centerRegionCb);
+            Scalar rightMean = Core.mean(rightRegionCb);
 
-                if (channel_diff > max_diff) {
-                    max_diff = channel_diff;
-                    max_channel_index = channel_index;
-                }
+            leftAvg = leftMean.val[0];
+            centerAvg = centerMean.val[0];
+            rightAvg = rightMean.val[0];
+
+            maxMean = Math.max(leftAvg, Math.max(centerAvg, rightAvg));
+
+            if (maxMean == leftAvg) {
+                position = CapstonePosition.LEFT;
+            } else if (maxMean == centerAvg) {
+                position = CapstonePosition.CENTER;
+            } else {
+                position = CapstonePosition.RIGHT;
             }
-
-            // set the cmode to the channel with the biggest difference
-            switch ((int) max_channel_index) {
-                case 1:
-                    position = CapstonePosition.CENTER;
-                    break;
-                case 2:
-                    position = CapstonePosition.RIGHT;
-                    break;
-                default:
-                    position = CapstonePosition.LEFT;
-            }
-
-            // replace input with the channel that had the biggest difference
-            Core.extractChannel(input, input, max_channel_index);
         } else {
+            leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
+            centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
+            rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
+
+            Scalar leftMean = Core.mean(leftRegionCb);
+            Scalar centerMean = Core.mean(centerRegionCb);
+            Scalar rightMean = Core.mean(rightRegionCb);
+
+            leftAvg = leftMean.val[0];
+            centerAvg = centerMean.val[0];
+            rightAvg = rightMean.val[0];
+
             position = CapstonePosition.LEFT;
 
             if (centerAvg > leftAvg && centerAvg > rightAvg) {
@@ -206,16 +201,11 @@ public class CapstonePipeline extends OpenCvPipeline {
 
         // draw visual bounds on the image
         Imgproc.rectangle( // LEFT
-                input, LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.LEFT ? GREEN : RED, 5);
+                input, LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.LEFT ? WHITE : BLUE, 5);
         Imgproc.rectangle( // CENTER
-                input, CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.CENTER ? GREEN : BLUE, 5);
+                input, CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.CENTER ? WHITE : BLUE, 5);
         Imgproc.rectangle( // RIGHT
-                input, RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.RIGHT ? GREEN : WHITE, 5);
-
-        // draw the average values on the image
-        Imgproc.putText(input, "Left: " + leftAvg, new Point(LEFT_TOPLEFT_ANCHOR_POINT.x, LEFT_TOPLEFT_ANCHOR_POINT.y - 10), 0, 1, position == CapstonePosition.LEFT ? GREEN : WHITE, 2);
-        Imgproc.putText(input, "Center: " + centerAvg, new Point(CENTER_TOPLEFT_ANCHOR_POINT.x, CENTER_TOPLEFT_ANCHOR_POINT.y - 10), 0, 1, position == CapstonePosition.CENTER ? GREEN : WHITE, 2);
-        Imgproc.putText(input, "Right: " + rightAvg, new Point(RIGHT_TOPLEFT_ANCHOR_POINT.x, RIGHT_TOPLEFT_ANCHOR_POINT.y - 10), 0, 1, position == CapstonePosition.RIGHT ? GREEN : WHITE, 2);
+                input, RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.RIGHT ? WHITE : BLUE, 5);
 
         return input;
     }

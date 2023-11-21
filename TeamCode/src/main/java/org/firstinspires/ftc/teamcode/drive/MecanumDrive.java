@@ -384,6 +384,10 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
      *                0 - Park as RED
      *                <p>
      *                1 - Park as BLUE
+     *                <p>
+     *                2 - Go to RED Tape Marks
+     *                <p>
+     *                3 - Go to BLUE Tape Marks
      * @return The built trajectory sequence
      */
     public TrajectorySequence genPath(int path_id) {
@@ -399,6 +403,14 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
                 return trajectorySequenceBuilder(new Pose2d(-63.00, -34.00, Math.toRadians(0.00)))
                         .splineTo(new Vector2d(-13.18, -34.00), Math.toRadians(0.16))
                         .lineTo(new Vector2d(-14.20, 69.52))
+                        .build();
+            case 2:
+                return trajectorySequenceBuilder(new Pose2d(70.00, -35.00, Math.toRadians(180.00)))
+                        .splineTo(new Vector2d(50.00, -35.00), Math.toRadians(180.00))
+                        .build();
+            case 3:
+                return trajectorySequenceBuilder(new Pose2d(-70.00, -35.00, Math.toRadians(0.00)))
+                        .splineTo(new Vector2d(-50.00, -35.00), Math.toRadians(0.00))
                         .build();
             default:
                 // Do nothing
