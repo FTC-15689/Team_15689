@@ -167,7 +167,7 @@ public class CapstonePipeline extends OpenCvPipeline {
             // the diffs list now contains a list of dictionaries, each dictionary containing the difference of the channel at the index of the dictionary
             // iterate over the diffs list and find the channel with the biggest difference
             double max_diff = 0;
-            double max_channel_index = 0;
+            int max_channel_index = 0;
 
             for (Dictionary<Integer, Double> diff : diffs) {
                 // the dictionary is a single k, v pair
@@ -191,6 +191,9 @@ public class CapstonePipeline extends OpenCvPipeline {
                 default:
                     position = CapstonePosition.LEFT;
             }
+
+            // replace input with the channel that had the biggest difference
+            Core.extractChannel(input, input, max_channel_index);
         } else {
             position = CapstonePosition.LEFT;
 
