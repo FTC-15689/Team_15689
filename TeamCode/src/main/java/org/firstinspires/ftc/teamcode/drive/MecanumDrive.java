@@ -394,23 +394,25 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         switch (path_id) {
             case 0:
                 // Park as RED
-                return trajectorySequenceBuilder(new Pose2d(61.00, -36.00, Math.toRadians(180.00)))
-                        .splineTo(new Vector2d(9.10, -35.31), Math.toRadians(179.24))
-                        .lineTo(new Vector2d(10.70, 64.57))
+                return trajectorySequenceBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
+                        .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
+                        .lineTo(new Vector2d(12.00, 63.00))
                         .build();
             case 1:
                 // Park as BLUE
-                return trajectorySequenceBuilder(new Pose2d(-63.00, -34.00, Math.toRadians(0.00)))
-                        .splineTo(new Vector2d(-13.18, -34.00), Math.toRadians(0.16))
-                        .lineTo(new Vector2d(-14.20, 69.52))
+                return trajectorySequenceBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
+                        .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
+                        .lineTo(new Vector2d(-12.00, 63.00))
                         .build();
             case 2:
-                return trajectorySequenceBuilder(new Pose2d(70.00, -35.00, Math.toRadians(180.00)))
-                        .splineTo(new Vector2d(50.00, -35.00), Math.toRadians(180.00))
+                // Go to RED Tape Marks
+                return trajectorySequenceBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
+                        .splineTo(new Vector2d(54.00, -35.00), Math.toRadians(180.00))
                         .build();
             case 3:
-                return trajectorySequenceBuilder(new Pose2d(-70.00, -35.00, Math.toRadians(0.00)))
-                        .splineTo(new Vector2d(-50.00, -35.00), Math.toRadians(0.00))
+                // Go to BLUE Tape Marks
+                return trajectorySequenceBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
+                        .splineTo(new Vector2d(-54.00, -35.00), Math.toRadians(0.00))
                         .build();
             default:
                 // Do nothing

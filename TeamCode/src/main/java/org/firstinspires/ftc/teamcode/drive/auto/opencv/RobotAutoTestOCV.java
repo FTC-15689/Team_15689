@@ -31,6 +31,8 @@ package org.firstinspires.ftc.teamcode.drive.auto.opencv;
 
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.encoderInchesToTicks;
 
+import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -70,9 +72,6 @@ public class RobotAutoTestOCV extends LinearOpMode {
 
     /* Declare OpMode members. */
     private MecanumDrive mecanumDriver;
-    private final ElapsedTime runtime = new ElapsedTime();
-    static final double DRIVE_SPEED = 0.6;
-    static final double TURN_SPEED = 0.5;
 
     @Override
     public void runOpMode() {
@@ -87,21 +86,47 @@ public class RobotAutoTestOCV extends LinearOpMode {
         while(opModeInInit()){
             capstonePosition = camera.getPosition();
             telemetry.addData("Current Position",capstonePosition);
-            telemetry.addData("Left Analysis",camera.getAnalysis()[0]);
-            telemetry.addData("Center Analysis",camera.getAnalysis()[1]);
-            telemetry.addData("Right Analysis",camera.getAnalysis()[2]);
+            telemetry.addData("Left Analysis",(int) camera.getAnalysis()[0]);
+            telemetry.addData("Center Analysis",(int) camera.getAnalysis()[1]);
+            telemetry.addData("Right Analysis",(int) camera.getAnalysis()[2]);
+            telemetry.addData("Target channel", camera.pipeline.bestChannel);
             telemetry.update();
         }
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
-        runtime.reset();
 
         try {
-            // Step through each leg of the path,
-            // Note: Reverse movement is obtained by setting a negative distance (not speed)
-            encoderDrive(DRIVE_SPEED, 10, 10);  // S1: Forward 47 Inches
-            encoderDrive(TURN_SPEED, 12, -12);  // S2: Turn Right 12 Inches
-            encoderDrive(DRIVE_SPEED, -10, -10);  // S3: Reverse 24 Inches
+            // move an initial distance to the capstone
+            mecanumDriver.followTrajectorySequence(mecanumDriver.genPath(2));
+
+            // wait for the robot to fully stop
+            sleep(1000);
+            // get a position
+            capstonePosition = camera.getPosition();
+
+            // move based on the position
+            switch (capstonePosition) {
+                case LEFT:
+                    mecanumDriver.followTrajectorySequence(
+                            mecanumDriver.trajectorySequenceBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
+                                    .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
+                                    .lineTo(new Vector2d(-12.00, 63.00))
+                                    .build()
+                    );
+                case RIGHT:
+                    mecanumDriver.followTrajectorySequence(
+                            mecanumDriver.trajectorySequenceBuilder(new Pose2d(54.00, -35.00, Math.toRadians(180.00)))
+                                    .splineTo(new Vector2d(31.00, -33.00), Math.toRadians(90.00))
+                                    .build()
+                    );
+                default:
+                    mecanumDriver.followTrajectorySequence(
+                            mecanumDriver.trajectorySequenceBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
+                                    .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
+                                    .lineTo(new Vector2d(-12.00, 63.00))
+                                    .build()
+                    );
+            }
         } catch (Exception e) {
             String err = e.toString();
 
@@ -114,43 +139,5 @@ public class RobotAutoTestOCV extends LinearOpMode {
         telemetry.addData("Path", "Complete");
         telemetry.update();
         sleep(1000);  // pause to display final telemetry message.
-    }
-
-    /*
-     *  Method to perform a relative move, based on encoder counts.
-     *  Encoders are not reset as the move is based on the current position.
-     *  Move will stop if any of three conditions occur:
-     *  1) Move gets to the desired position
-     *  2) Move runs out of time
-     *  3) Driver stops the opmode running.
-     */
-    public void encoderDrive(double speed,
-                             double leftInches, double rightInches
-                             ) {
-
-        // Ensure that the opmode is still active
-        if (opModeIsActive()) {
-            // get how many encoder ticks to move (in/in * ticks)
-            int ticksToMoveLeft = encoderInchesToTicks(leftInches);
-            int ticksToMoveRight = encoderInchesToTicks(rightInches);
-
-            telemetry.addData("Moving by", "%d %d", ticksToMoveLeft, ticksToMoveRight);
-            telemetry.update();
-
-            mecanumDriver.goToEncoderPositionREL(
-                    ticksToMoveLeft,
-                    ticksToMoveLeft,
-                    ticksToMoveRight,
-                    ticksToMoveRight,
-                    speed
-            );
-
-            mecanumDriver.waitForIdle();
-
-            mecanumDriver.setMotorPowers(0, 0, 0, 0);
-        }
-        mecanumDriver.brakeALL();
-
-        sleep(250);
     }
 }
