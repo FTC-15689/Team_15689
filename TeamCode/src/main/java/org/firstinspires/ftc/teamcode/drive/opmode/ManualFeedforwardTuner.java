@@ -42,20 +42,16 @@ import java.util.Objects;
  * Pressing B/O (Xbox/PS4) will cede control back to the tuning process.
  */
 @Config
-@Autonomous(group = "drive")
+@Autonomous(group = "drive", name = "!2 Manual FF Tune")
 public class ManualFeedforwardTuner extends LinearOpMode {
     public static double DISTANCE = 72; // in
 
     private final FtcDashboard dashboard = FtcDashboard.getInstance();
 
-    private MecanumDrive drive;
-
     enum Mode {
         DRIVER_MODE,
         TUNING_MODE
     }
-
-    private Mode mode;
 
     private static MotionProfile generateProfile(boolean movingForward) {
         MotionState start = new MotionState(movingForward ? 0 : DISTANCE, 0, 0, 0);
@@ -72,11 +68,11 @@ public class ManualFeedforwardTuner extends LinearOpMode {
 
         Telemetry telemetry = new MultipleTelemetry(this.telemetry, dashboard.getTelemetry());
 
-        drive = new MecanumDrive(hardwareMap);
+        MecanumDrive drive = new MecanumDrive(hardwareMap);
 
         final VoltageSensor voltageSensor = hardwareMap.voltageSensor.iterator().next();
 
-        mode = Mode.TUNING_MODE;
+        Mode mode = Mode.TUNING_MODE;
 
         NanoClock clock = NanoClock.system();
 
@@ -132,7 +128,7 @@ public class ManualFeedforwardTuner extends LinearOpMode {
                     if (gamepad1.b) {
                         mode = Mode.TUNING_MODE;
                         movingForwards = true;
-                        activeProfile = generateProfile(movingForwards);
+                        activeProfile = generateProfile(true);
                         profileStart = clock.seconds();
                     }
 

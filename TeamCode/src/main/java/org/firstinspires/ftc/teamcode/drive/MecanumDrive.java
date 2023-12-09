@@ -56,8 +56,8 @@ import java.util.List;
  */
 @Config
 public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive {
-    public static PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(0, 0, 0);
-    public static PIDCoefficients HEADING_PID = new PIDCoefficients(0, 0, 0);
+    public static PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(8, 0, 0);
+    public static PIDCoefficients HEADING_PID = new PIDCoefficients(8, 0, 0);
 
     public static double LATERAL_MULTIPLIER = 1;
 
@@ -75,7 +75,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     private final DcMotorEx rightRear;
     private final DcMotorEx rightFront;
     private final List<DcMotorEx> drive_motors;
-    private final DcMotorEx liftMotor;
     private final List<DcMotorEx> extra_motors;
 
     private final IMU imu;
@@ -118,8 +117,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
             motor.setMotorType(motorConfigurationType);
         }
 
-        liftMotor = hardwareMap.get(DcMotorEx.class, "liftMotor");
-
+        DcMotorEx liftMotor = hardwareMap.get(DcMotorEx.class, "liftMotor");
         extra_motors = Collections.singletonList(liftMotor);
 
         if (RUN_USING_ENCODER) {
@@ -316,7 +314,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     }
 
     public void setExtra_motors(double lm) {
-        liftMotor.setPower(lm);
+        extra_motors.get(0).setPower(lm);
     }
 
     public void setTargets(int leftFrontT, int leftRearT, int rightRearT, int rightFrontT) {
@@ -351,10 +349,13 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     }
 
     public void brakeALL() {
-        leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        leftRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        for (DcMotorEx motor : drive_motors) {
+            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        }
+
+        for (DcMotorEx motor : extra_motors) {
+            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        }
     }
 
     @Override
