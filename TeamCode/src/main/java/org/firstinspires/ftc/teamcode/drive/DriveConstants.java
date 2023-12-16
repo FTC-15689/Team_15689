@@ -1,8 +1,11 @@
 package org.firstinspires.ftc.teamcode.drive;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.google.gson.JsonObject;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+
+import java.io.FileNotFoundException;
 
 /*
  * Constants shared between multiple drive types.
@@ -94,5 +97,19 @@ public class DriveConstants {
     public static double getMotorVelocityF(double ticksPerSecond) {
         // see https://docs.google.com/document/d/1tyWrXDfMidwYyP_5H4mZyVgaEswhOC35gvdmP-V-5hA/edit#heading=h.61g9ixenznbx
         return 32767 / ticksPerSecond;
+    }
+
+    public static void save() throws FileNotFoundException {
+        String filename = "drive_constants.json";
+        JsonObject data = new JsonObject();
+
+        // first set the motion values
+        data.addProperty("kA", kA);
+        data.addProperty("kV", kV);
+        data.addProperty("kStatic", kStatic);
+        data.addProperty("MAX_ANG_VEL", MAX_ANG_VEL);
+
+        // set track size
+        data.addProperty("TRACK_WIDTH", TRACK_WIDTH);
     }
 }
