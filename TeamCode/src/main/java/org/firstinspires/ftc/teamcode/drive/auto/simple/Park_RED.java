@@ -9,7 +9,7 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 
 @Autonomous(name = "!PARk: RED", group = "Robot")
-public class RobotAutoDriveByTrajectory extends LinearOpMode {
+public class Park_RED extends LinearOpMode {
     private final ElapsedTime runtime = new ElapsedTime();
     @Override
     public void runOpMode() {
@@ -22,7 +22,7 @@ public class RobotAutoDriveByTrajectory extends LinearOpMode {
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
         mecanumDriver.setPoseEstimate(startPose);
 
-        TrajectorySequence Park_Blue = mecanumDriver.genPath(0);
+        TrajectorySequence Park_Red = mecanumDriver.genPath(0);
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
@@ -30,6 +30,6 @@ public class RobotAutoDriveByTrajectory extends LinearOpMode {
 
         if (isStopRequested()) {return;}
 
-        mecanumDriver.followTrajectorySequence(Park_Blue);
+        mecanumDriver.followTrajectorySequence(Park_Red);
     }
 }
