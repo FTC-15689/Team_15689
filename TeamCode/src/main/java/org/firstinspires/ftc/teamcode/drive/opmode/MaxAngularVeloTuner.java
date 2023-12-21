@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ANG_VEL;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
@@ -28,7 +30,6 @@ import java.util.Objects;
 public class MaxAngularVeloTuner extends LinearOpMode {
     public static double RUNTIME = 4.0;
 
-    private ElapsedTime timer;
     private double maxAngVelocity = 0.0;
 
     @Override
@@ -51,7 +52,7 @@ public class MaxAngularVeloTuner extends LinearOpMode {
         telemetry.update();
 
         drive.setDrivePower(new Pose2d(0, 0, 1));
-        timer = new ElapsedTime();
+        ElapsedTime timer = new ElapsedTime();
 
         while (!isStopRequested() && timer.seconds() < RUNTIME) {
             drive.updatePoseEstimate();
@@ -59,6 +60,7 @@ public class MaxAngularVeloTuner extends LinearOpMode {
             Pose2d poseVelo = Objects.requireNonNull(drive.getPoseVelocity(), "poseVelocity() must not be null. Ensure that the getWheelVelocities() method has been overridden in your localizer.");
 
             maxAngVelocity = Math.max(poseVelo.getHeading(), maxAngVelocity);
+            MAX_ANG_VEL = maxAngVelocity;
         }
 
         drive.setDrivePower(new Pose2d());

@@ -2,6 +2,9 @@ package org.firstinspires.ftc.teamcode.drive.opmode;
 
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_RPM;
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.RUN_USING_ENCODER;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kA;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kStatic;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.rpmToVelocity;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -136,9 +139,13 @@ public class AutomaticFeedforwardTuner extends LinearOpMode {
         if (fitIntercept) {
             telemetry.addLine(Misc.formatInvariant("kV = %.5f, kStatic = %.5f (R^2 = %.2f)",
                     rampResult.kV, rampResult.kStatic, rampResult.rSquare));
+            kV = rampResult.kV;
+            kStatic = rampResult.kStatic;
+
         } else {
             telemetry.addLine(Misc.formatInvariant("kV = %.5f (R^2 = %.2f)",
                     rampResult.kStatic, rampResult.rSquare));
+            kStatic = rampResult.kStatic;
         }
         telemetry.addLine("Would you like to fit kA?");
         telemetry.addLine("Press (Y/Δ) for yes, (B/O) for no");
@@ -212,6 +219,7 @@ public class AutomaticFeedforwardTuner extends LinearOpMode {
             telemetry.addLine(Misc.formatInvariant("kA = %.5f (R^2 = %.2f)",
                     accelResult.kA, accelResult.rSquare));
             telemetry.update();
+            kA = accelResult.kA;
         }
 
         while (!isStopRequested()) {
