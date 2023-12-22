@@ -82,6 +82,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
 
     private final List<Integer> lastEncPositions = new ArrayList<>();
     private final List<Integer> lastEncVels = new ArrayList<>();
+    public static Pose2d currentPos = new Pose2d(0, 0, Math.toRadians(0));
 
     public MecanumDrive(HardwareMap hardwareMap) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
@@ -141,6 +142,12 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
                 follower, HEADING_PID, batteryVoltageSensor,
                 lastEncPositions, lastEncVels, lastTrackingEncPositions, lastTrackingEncVels
         );
+    }
+
+    public Pose2d getPoseEst() {
+        Pose2d pose = getPoseEstimate();
+        currentPos = pose;
+        return pose;
     }
 
     public TrajectoryBuilder trajectoryBuilder(Pose2d startPose) {
@@ -210,6 +217,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         updatePoseEstimate();
         DriveSignal signal = trajectorySequenceRunner.update(getPoseEstimate(), getPoseVelocity());
         if (signal != null) setDriveSignal(signal);
+        currentPos = getPoseEstimate();
     }
 
     public void waitForIdle() {

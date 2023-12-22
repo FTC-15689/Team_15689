@@ -91,7 +91,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
             double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
             double lateral = gamepad1.left_stick_x;
-            double yaw = gamepad1.right_stick_x;
+            double yaw = -gamepad1.right_stick_y + gamepad1.right_stick_x;
 
             double liftPower = gamepad2.right_trigger - gamepad2.left_trigger;
 
