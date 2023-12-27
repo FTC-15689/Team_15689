@@ -33,7 +33,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
 
 /**
  * This file contains an example of a Linear "OpMode".
@@ -74,7 +74,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap);
+        OldMecanumDrive mecanumDriver = new OldMecanumDrive(hardwareMap);
 
 
         // Wait for the game to start (driver presses PLAY)

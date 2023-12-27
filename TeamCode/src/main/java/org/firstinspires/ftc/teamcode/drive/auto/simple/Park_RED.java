@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 
 @Autonomous(name = "!PARk: RED", group = "Robot")
@@ -17,7 +17,7 @@ public class Park_RED extends LinearOpMode {
         telemetry.addData("Starting at", 0);
         telemetry.update();
 
-        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap);
+        OldMecanumDrive mecanumDriver = new OldMecanumDrive(hardwareMap);
 
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
         mecanumDriver.setPoseEstimate(startPose);

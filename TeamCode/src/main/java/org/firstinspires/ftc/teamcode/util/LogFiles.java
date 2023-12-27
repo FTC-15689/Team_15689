@@ -17,7 +17,7 @@ import com.qualcomm.robotcore.util.WebHandlerManager;
 import org.firstinspires.ftc.ftccommon.external.WebHandlerRegistrar;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.drive.DriveConstants;
-import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
 import org.firstinspires.ftc.teamcode.drive.SampleTankDrive;
 import org.firstinspires.ftc.teamcode.drive.StandardTrackingWheelLocalizer;
 
@@ -66,13 +66,13 @@ public final class LogFiles {
         public double maxAngVel = DriveConstants.MAX_ANG_VEL;
         public double maxAngAccel = DriveConstants.MAX_ANG_ACCEL;
 
-        public double mecTransP = MecanumDrive.TRANSLATIONAL_PID.kP;
-        public double mecTransI = MecanumDrive.TRANSLATIONAL_PID.kI;
-        public double mecTransD = MecanumDrive.TRANSLATIONAL_PID.kD;
-        public double mecHeadingP = MecanumDrive.HEADING_PID.kP;
-        public double mecHeadingI = MecanumDrive.HEADING_PID.kI;
-        public double mecHeadingD = MecanumDrive.HEADING_PID.kD;
-        public double mecLateralMultiplier = MecanumDrive.LATERAL_MULTIPLIER;
+        public double mecTransP = OldMecanumDrive.TRANSLATIONAL_PID.kP;
+        public double mecTransI = OldMecanumDrive.TRANSLATIONAL_PID.kI;
+        public double mecTransD = OldMecanumDrive.TRANSLATIONAL_PID.kD;
+        public double mecHeadingP = OldMecanumDrive.HEADING_PID.kP;
+        public double mecHeadingI = OldMecanumDrive.HEADING_PID.kI;
+        public double mecHeadingD = OldMecanumDrive.HEADING_PID.kD;
+        public double mecLateralMultiplier = OldMecanumDrive.LATERAL_MULTIPLIER;
 
         public double tankAxialP = SampleTankDrive.AXIAL_PID.kP;
         public double tankAxialI = SampleTankDrive.AXIAL_PID.kI;

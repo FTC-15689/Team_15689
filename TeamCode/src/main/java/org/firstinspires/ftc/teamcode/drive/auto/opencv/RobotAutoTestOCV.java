@@ -34,7 +34,7 @@ import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
 import org.firstinspires.ftc.teamcode.drive.auto.CapstoneDetectionCamera;
 import org.firstinspires.ftc.teamcode.drive.auto.CapstonePipeline;
 
@@ -74,7 +74,7 @@ public class RobotAutoTestOCV extends LinearOpMode {
         telemetry.update();
 
         /* Declare OpMode members. */
-        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap);
+        OldMecanumDrive mecanumDriver = new OldMecanumDrive(hardwareMap);
         CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap, -1);
         CapstonePipeline.CapstonePosition capstonePosition;
 
