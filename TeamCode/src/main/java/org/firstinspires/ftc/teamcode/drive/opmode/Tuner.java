@@ -8,10 +8,6 @@ import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kA;
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kStatic;
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.rpmToVelocity;
-import static org.firstinspires.ftc.teamcode.drive.opmode.MaxAngularVeloTuner.RUNTIME;
-import static org.firstinspires.ftc.teamcode.drive.opmode.TrackWidthTuner.ANGLE;
-import static org.firstinspires.ftc.teamcode.drive.opmode.TrackWidthTuner.DELAY;
-import static org.firstinspires.ftc.teamcode.drive.opmode.TrackWidthTuner.NUM_TRIALS;
 
 import android.os.Build;
 
@@ -20,6 +16,7 @@ import androidx.annotation.RequiresApi;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
@@ -32,7 +29,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.Misc;
 import org.firstinspires.ftc.teamcode.drive.DriveConstants;
-import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 import org.firstinspires.ftc.teamcode.util.LoggingUtil;
 import org.firstinspires.ftc.teamcode.util.RegressionUtil;
 
@@ -51,8 +48,11 @@ import java.util.Objects;
 @Config
 @Autonomous(group = "drive", name = "Mecanum Auto Tuner")
 public class Tuner extends LinearOpMode {
-    public static double MAX_POWER = 0.7;
-    public static double DISTANCE = 100; // in
+    private static final int NUM_TRIALS = 5;
+    private static final int ANGLE = 90;
+    private static final long DELAY = (long) 2.0;
+    public static final double MAX_POWER = 0.7;
+    public static final double DISTANCE = 100; // in
     private double maxAngVelocity = 0.0;
     private final Pose2d empty_pose = new Pose2d(0, 0, 0);
 
@@ -65,7 +65,7 @@ public class Tuner extends LinearOpMode {
 
         Telemetry telemetry = new MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().getTelemetry());
 
-        OldMecanumDrive drive = new OldMecanumDrive(hardwareMap, empty_pose);
+        MecanumDrive drive = new MecanumDrive(hardwareMap, empty_pose);
 
         telemetry.addLine("Press play to begin the feedforward tuning routine");
         telemetry.update();
@@ -251,11 +251,12 @@ public class Tuner extends LinearOpMode {
                 drive.turnAsync(Math.toRadians(ANGLE));
 
                 while (!isStopRequested() && drive.isBusy()) {
-                    double heading = drive.getPoseEstimate().getHeading();
-                    headingAccumulator += Angle.normDelta(heading - lastHeading);
+                    double heading = drive.getPoseEstimate().heading.toDouble();
+                    double deltaHeading = heading - lastHeading;
+                    headingAccumulator += (deltaHeading % (Math.PI * 2)) % (Math.PI * 2);
                     lastHeading = heading;
 
-                    drive.update();
+                    drive.updatePoseEstimate();
                 }
 
                 double trackWidth = DriveConstants.TRACK_WIDTH * Math.toRadians(ANGLE) / headingAccumulator;
@@ -284,16 +285,17 @@ public class Tuner extends LinearOpMode {
             drive.setDrivePower(new Pose2d(0, 0, 1));
             ElapsedTime timer = new ElapsedTime();
 
+            double RUNTIME = 10.0;
             while (!isStopRequested() && timer.seconds() < RUNTIME && !gamepad1.b) {
                 drive.updatePoseEstimate();
 
-                Pose2d poseVelo = Objects.requireNonNull(drive.getPoseVelocity(), "poseVelocity() must not be null. Ensure that the getWheelVelocities() method has been overridden in your localizer.");
+                PoseVelocity2d poseVelo = Objects.requireNonNull(drive.getPoseVelocity(), "poseVelocity() must not be null. Ensure that the getWheelVelocities() method has been overridden in your localizer.");
 
-                maxAngVelocity = Math.max(poseVelo.getHeading(), maxAngVelocity);
+                maxAngVelocity = Math.max(poseVelo.angVel, maxAngVelocity);
                 MAX_ANG_VEL = maxAngVelocity;
             }
 
-            drive.setDrivePower(new Pose2d());
+            drive.setDrivePower(new Pose2d(0,0,0));
 
             telemetry.addData("Max Angular Velocity (rad)", maxAngVelocity);
             telemetry.addData("Max Angular Velocity (deg)", Math.toDegrees(maxAngVelocity));
@@ -308,12 +310,12 @@ public class Tuner extends LinearOpMode {
         telemetry.addLine("Press Y to begin back and forth tuning or B to skip");
         telemetry.update();
 
-        Trajectory trajectoryForward = drive.trajectoryBuilder(new Pose2d())
-                .forward(DISTANCE)
+        Action trajectoryForward = drive.actionBuilder(drive.getPoseEstimate())
+                .lineToX(DISTANCE)
                 .build();
 
-        Trajectory trajectoryBackward = drive.trajectoryBuilder(trajectoryForward.end())
-                .back(DISTANCE)
+        Action trajectoryBackward = drive.actionBuilder(new Pose2d(drive.getPoseEstimate().position.minus(new Vector2d(DISTANCE, 0)), 0))
+                .lineToX(-DISTANCE)
                 .build();
 
         while (!gamepad1.y || !gamepad1.b) {
@@ -321,8 +323,8 @@ public class Tuner extends LinearOpMode {
         }
 
         while (opModeIsActive() && !isStopRequested() && !gamepad1.b) {
-            drive.followTrajectory(trajectoryForward);
-            drive.followTrajectory(trajectoryBackward);
+            drive.followAction(trajectoryForward);
+            drive.followAction(trajectoryBackward);
         }
 
         while (!isStopRequested()) {

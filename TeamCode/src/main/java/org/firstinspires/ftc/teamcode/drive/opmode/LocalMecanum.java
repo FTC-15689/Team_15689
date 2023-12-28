@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -10,7 +11,7 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 
 /**
  * This opmode demonstrates how one would implement field centric control using
- * `OldMecanumDrive.java`. This file is essentially just `TeleOpDrive.java` with the addition of
+ * `OldMecanumDrive.md`. This file is essentially just `TeleOpDrive.java` with the addition of
  * field centric control. To achieve field centric control, the only modification one needs is to
  * rotate the input vector by the current heading before passing it into the inverse kinematics.
  * <p>
@@ -37,10 +38,6 @@ public class LocalMecanum extends LinearOpMode {
 
             // Create a vector from the gamepad x/y inputs
             // Then, rotate that vector by the inverse of that heading
-//            Vector2d input = new Vector2d(
-//                    -gamepad1.left_stick_y,
-//                    -gamepad1.left_stick_x
-//            ).rotated(-poseEstimate.getHeading());
             Vector2d input = drive.rotate(
                     new Vector2d(
                             -gamepad1.left_stick_y,
@@ -51,17 +48,17 @@ public class LocalMecanum extends LinearOpMode {
 
             // Pass in the rotated input + right stick value for rotation
             // Rotation is not part of the rotated input thus must be passed in separately
-            drive.setWeightedDrivePower(
-                    new Pose2d(
+            drive.setDrivePowers(new PoseVelocity2d(
+                    new Vector2d(
                             input.x,
-                            input.y,
-                            -gamepad1.right_stick_x
-                    )
-            );
-            MecanumDrive.HEADING_PID.p += gamepad1.dpad_up ? 1 : gamepad1.dpad_down ? -1 : 0;
+                            input.y
+                    ),
+                    -gamepad1.right_stick_x - gamepad1.right_stick_y
+            ));
+            MecanumDrive.HEADING_PID.p += gamepad1.dpad_up ? 0.5 : gamepad1.dpad_down ? -0.5 : 0;
 
             // Update everything. Odometry. Etc.
-            drive.update();
+            drive.updatePoseEstimate();
 
             // Print pose to telemetry
             telemetry.addData("x", poseEstimate.position.x);

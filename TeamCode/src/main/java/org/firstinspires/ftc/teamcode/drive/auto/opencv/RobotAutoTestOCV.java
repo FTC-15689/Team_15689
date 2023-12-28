@@ -29,12 +29,12 @@
 
 package org.firstinspires.ftc.teamcode.drive.auto.opencv;
 
-import com.acmerobotics.roadrunner.geometry.Pose2d;
-import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 import org.firstinspires.ftc.teamcode.drive.auto.CapstoneDetectionCamera;
 import org.firstinspires.ftc.teamcode.drive.auto.CapstonePipeline;
 
@@ -74,7 +74,8 @@ public class RobotAutoTestOCV extends LinearOpMode {
         telemetry.update();
 
         /* Declare OpMode members. */
-        OldMecanumDrive mecanumDriver = new OldMecanumDrive(hardwareMap);
+        Pose2d empty_pose = new Pose2d(0,0,0);
+        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap, empty_pose);
         CapstoneDetectionCamera camera = new CapstoneDetectionCamera(hardwareMap, -1);
         CapstonePipeline.CapstonePosition capstonePosition;
 
@@ -92,7 +93,7 @@ public class RobotAutoTestOCV extends LinearOpMode {
 
         try {
             // move an initial distance to the capstone
-            mecanumDriver.followTrajectorySequence(mecanumDriver.genPath(2));
+            mecanumDriver.followAction(mecanumDriver.genPath(2));
 
             // wait for the robot to fully stop
             sleep(1000);
@@ -108,20 +109,20 @@ public class RobotAutoTestOCV extends LinearOpMode {
             // move based on the position
             switch (capstonePosition) {
                 case LEFT:
-                    mecanumDriver.followTrajectorySequence(
-                            mecanumDriver.trajectorySequenceBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
+                    mecanumDriver.followAction(
+                            mecanumDriver.actionBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
                                     .splineTo(new Vector2d(-48.00, -30.00), Math.toRadians(110.00))
                                     .build()
                     );
                 case RIGHT:
-                    mecanumDriver.followTrajectorySequence(
-                            mecanumDriver.trajectorySequenceBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
+                    mecanumDriver.followAction(
+                            mecanumDriver.actionBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
                                     .splineTo(new Vector2d(-30.00, -36.00), Math.toRadians(0.00))
                                     .build()
                     );
                 default:
-                    mecanumDriver.followTrajectorySequence(
-                            mecanumDriver.trajectorySequenceBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
+                    mecanumDriver.followAction(
+                            mecanumDriver.actionBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
                                     .splineTo(new Vector2d(-35.00, -24.00), Math.toRadians(90.00))
                                     .build()
                     );

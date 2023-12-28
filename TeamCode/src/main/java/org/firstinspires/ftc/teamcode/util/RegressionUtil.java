@@ -2,8 +2,6 @@ package org.firstinspires.ftc.teamcode.util;
 
 import androidx.annotation.Nullable;
 
-import com.acmerobotics.roadrunner.kinematics.Kinematics;
-
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import java.io.File;
@@ -144,8 +142,10 @@ public class RegressionUtil {
             double accel = accelSamples.get(i);
             double power = powerSamples.get(i);
 
-            double powerFromVel = Kinematics.calculateMotorFeedforward(
-                    vel, 0.0, rampResult.kV, 0.0, rampResult.kStatic);
+            double powerFromVel = vel * rampResult.kV + accel * 0.0;
+            if (powerFromVel != 0.0) {
+                powerFromVel += Math.signum(powerFromVel) * rampResult.kStatic;
+            }
             double powerFromAccel = power - powerFromVel;
 
             accelReg.addData(accel, powerFromAccel);

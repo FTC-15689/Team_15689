@@ -8,8 +8,6 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class CapstonePipeline extends OpenCvPipeline {

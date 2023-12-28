@@ -1,12 +1,12 @@
 package org.firstinspires.ftc.teamcode.messages;
 
 public final class MecanumCommandMessage {
-    public long timestamp;
-    public double voltage;
-    public double leftFrontPower;
-    public double leftBackPower;
-    public double rightBackPower;
-    public double rightFrontPower;
+    public final long timestamp;
+    public final double voltage;
+    public final double leftFrontPower;
+    public final double leftBackPower;
+    public final double rightBackPower;
+    public final double rightFrontPower;
 
     public MecanumCommandMessage(double voltage, double leftFrontPower, double leftBackPower, double rightBackPower, double rightFrontPower) {
         this.timestamp = System.nanoTime();

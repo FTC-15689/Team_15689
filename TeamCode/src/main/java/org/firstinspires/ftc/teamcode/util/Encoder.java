@@ -1,8 +1,13 @@
 package org.firstinspires.ftc.teamcode.util;
 
-import com.acmerobotics.roadrunner.util.NanoClock;
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+
+import java.time.Clock;
 
 /**
  * Wraps a motor instance to provide corrected velocity counts and allow reversing independently of the corresponding
@@ -38,7 +43,7 @@ public class Encoder {
     }
 
     private final DcMotorEx motor;
-    private final NanoClock clock;
+    private final Clock clock;
 
     private Direction direction;
 
@@ -47,7 +52,8 @@ public class Encoder {
     private final double[] velocityEstimates;
     private double lastUpdateTime;
 
-    public Encoder(DcMotorEx motor, NanoClock clock) {
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public Encoder(DcMotorEx motor, Clock clock) {
         this.motor = motor;
         this.clock = clock;
 
@@ -55,11 +61,7 @@ public class Encoder {
 
         this.lastPosition = 0;
         this.velocityEstimates = new double[3];
-        this.lastUpdateTime = clock.seconds();
-    }
-
-    public Encoder(DcMotorEx motor) {
-        this(motor, NanoClock.system());
+        this.lastUpdateTime = clock.millis() * 1000;
     }
 
     public Direction getDirection() {
@@ -84,11 +86,12 @@ public class Encoder {
      *
      * @return encoder position
      */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public int getCurrentPosition() {
         int multiplier = getMultiplier();
         int currentPosition = motor.getCurrentPosition() * multiplier;
         if (currentPosition != lastPosition) {
-            double currentTime = clock.seconds();
+            double currentTime = clock.millis() * 1000;
             double dt = currentTime - lastUpdateTime;
             velocityEstimates[velocityEstimateIdx] = (currentPosition - lastPosition) / dt;
             velocityEstimateIdx = (velocityEstimateIdx + 1) % 3;

@@ -29,11 +29,12 @@
 
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.drive.OldMecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 
 /**
  * This file contains an example of a Linear "OpMode".
@@ -74,7 +75,8 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        OldMecanumDrive mecanumDriver = new OldMecanumDrive(hardwareMap);
+        Pose2d empty_pose = new Pose2d(0,0,0);
+        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap, empty_pose);
 
 
         // Wait for the game to start (driver presses PLAY)
@@ -122,9 +124,6 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
                     rightBackPower,
                     rightFrontPower
             );
-            mecanumDriver.setExtra_motors(
-                    liftPower
-            );
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime);
@@ -132,7 +131,4 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.update();
         }
-
-        // immediately stop all motors
-        mecanumDriver.brakeALL();
     }}

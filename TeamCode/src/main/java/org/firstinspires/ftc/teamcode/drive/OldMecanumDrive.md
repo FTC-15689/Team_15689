@@ -1,3 +1,4 @@
+```java
 package org.firstinspires.ftc.teamcode.drive;
 
 import static org.firstinspires.ftc.teamcode.drive.DriveConstants.MAX_ACCEL;
@@ -15,6 +16,7 @@ import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -43,7 +45,7 @@ import java.util.List;
 @Config
 public class OldMecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive {
     public static PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(1, 0, 0);
-    public static PIDCoefficients HEADING_PID = ;
+    public static PIDCoefficients HEADING_PID = new PIDCoefficients(8,0,0);
 
     public static double LATERAL_MULTIPLIER = 1;
 
@@ -70,7 +72,7 @@ public class OldMecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDr
     private final List<Integer> lastEncVels = new ArrayList<>();
     public static Pose2d currentPos = new Pose2d(0, 0, Math.toRadians(0));
 
-    public OldMecanumDrive(HardwareMap hardwareMap) {
+    public OldMecanumDrive(HardwareMap hardwareMap, Pose2d empty_pose) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
 
         TrajectoryFollower follower = new HolonomicPIDVAFollower(TRANSLATIONAL_PID, TRANSLATIONAL_PID, HEADING_PID,
@@ -413,3 +415,4 @@ public class OldMecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDr
         }
     }
 }
+```

@@ -13,9 +13,9 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 
 
 public class CapstoneDetectionCamera {
-    WebcamName webcam1;
-    OpenCvCamera camera;
-    public CapstonePipeline pipeline;
+    final WebcamName webcam1;
+    final OpenCvCamera camera;
+    public final CapstonePipeline pipeline;
     Telemetry telemetry;
 
     public CapstoneDetectionCamera(HardwareMap hardwareMap, int color_index) {
@@ -52,7 +52,7 @@ public class CapstoneDetectionCamera {
                                          @Override
                                          public void onError(int errorCode) {
                                              System.out.println("error" + errorCode);
-                                             telemetry.addData("Error has occured. Error code - ", errorCode);
+                                             telemetry.addData("Error has occurred. Error code - ", errorCode);
                                          }
                                      }
         );

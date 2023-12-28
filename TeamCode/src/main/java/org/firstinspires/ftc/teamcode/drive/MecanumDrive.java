@@ -1,8 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive;
 
-import static org.firstinspires.ftc.teamcode.drive.OldMecanumDrive.OMEGA_WEIGHT;
-import static org.firstinspires.ftc.teamcode.drive.OldMecanumDrive.VX_WEIGHT;
-import static org.firstinspires.ftc.teamcode.drive.OldMecanumDrive.VY_WEIGHT;
+import static org.firstinspires.ftc.teamcode.drive.DriveConstants.TRACK_WIDTH;
 
 import androidx.annotation.NonNull;
 
@@ -18,6 +16,7 @@ import com.acmerobotics.roadrunner.HolonomicController;
 import com.acmerobotics.roadrunner.MecanumKinematics;
 import com.acmerobotics.roadrunner.MinVelConstraint;
 import com.acmerobotics.roadrunner.MotorFeedforward;
+import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Pose2dDual;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
@@ -61,6 +60,12 @@ import java.util.List;
 @Config
 public final class MecanumDrive {
     public static final PIDCoefficients HEADING_PID = new PIDCoefficients(10, 0, 0);
+    public static final PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(0, 0, 0);
+    public static final double VX_WEIGHT = 1;
+    public static final double VY_WEIGHT = 1;
+    public static final double OMEGA_WEIGHT = 1;
+    public static final double LATERAL_MULTIPLIER = 1.0;
+    private boolean isBusy = false;
 
     public void setMode(DcMotor.RunMode runMode) {
         this.leftFront.setMode(runMode);
@@ -68,6 +73,7 @@ public final class MecanumDrive {
         this.leftBack.setMode(runMode);
         this.rightFront.setMode(runMode);
     }
+
     public Vector2d rotate(Vector2d vector, Double angle) {
         double rx = (vector.x * Math.cos(angle)) - (vector.y * Math.sin(angle));
         double ry = (vector.x * Math.sin(angle)) + (vector.y * Math.cos(angle));
@@ -95,59 +101,159 @@ public final class MecanumDrive {
         setDrivePower(vel);
     }
 
-    private void setDrivePower(Pose2d vel) {
+    public void setDrivePower(Pose2d vel) {
         setDrivePowers(new PoseVelocity2d(
                 vel.position,
                 vel.heading.toDouble()
         ));
     }
 
-    public void update() {
+    public void setPoseEstimate(Pose2d emptyPose) {
+        pose = new Pose2d(emptyPose.position, emptyPose.heading.toDouble());
+    }
+
+    public void setPoseEstimate() {
+        pose = new Pose2d(0, 0, 0);
+    }
+
+    public Pose2d getPoseEstimate() {
         updatePoseEstimate();
-        DriveSignal signal = trajectoryActionRunner.update(getPoseEstimate(), getPoseVelocity());
-        if (signal != null) setDriveSignal(signal);
-        currentPos = getPoseEstimate();
+        return new Pose2d(pose.position, pose.heading.toDouble());
+    }
+
+    public boolean isBusy() {
+        return isBusy;
+    }
+
+    /**
+     * @param path_id valid ids:
+     *                <p>
+     *                0 - Park as RED
+     *                <p>
+     *                1 - Park as BLUE
+     *                <p>
+     *                2 - Go to RED Tape Marks
+     *                <p>
+     *                3 - Go to BLUE Tape Marks
+     * @return The built trajectory sequence
+     */
+    public Action genPath(int path_id) {
+        switch (path_id) {
+            case 0:
+                // Park as RED
+                return actionBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
+                        .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
+                        .lineToX(12.0)
+                        .lineToY(63.0)
+                        .build();
+            case 1:
+                // Park as BLUE
+                return actionBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
+                        .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
+                        .lineToX(-12.0)
+                        .lineToY(63.0)
+                        .build();
+            case 2:
+                // Go to RED Tape Marks
+                return actionBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
+                        .splineTo(new Vector2d(54.00, -35.00), Math.toRadians(180.00))
+                        .build();
+            case 3:
+                // Go to BLUE Tape Marks
+                return actionBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
+                        .splineTo(new Vector2d(-54.00, -35.00), Math.toRadians(0.00))
+                        .build();
+            default:
+                // Do nothing
+                return new NullAction();
+        }
+    }
+
+    public void turnAsync(double radians) {
+        followActionAsync(actionBuilder(getPoseEstimate())
+                .turn(radians)
+                .build());
+    }
+
+    public void followAction(Action path) {
+        isBusy = true;
+        Thread t1 = followActionAsync(path);
+        while (t1.isAlive() && !t1.isInterrupted()) {
+            Thread.yield();
+        }
+        isBusy = false;
+
+        updatePoseEstimate();
+    }
+
+    private Thread followActionAsync(Action path) {
+        Thread follower = new ThreadedAction(path);
+        follower.start();
+        return follower;
+    }
+
+    public PoseVelocity2d getPoseVelocity() {
+        double LFV = leftFront.getVelocity();
+        double LRV = leftBack.getVelocity();
+        double RFV = rightFront.getVelocity();
+        double RRV = rightBack.getVelocity();
+        double k = TRACK_WIDTH;
+
+        return new PoseVelocity2d(
+                new Vector2d(
+                    (LFV + LRV + RFV + RRV),
+                    (LRV + RFV - LFV - RRV)
+                ),
+                (RRV + RFV - LFV - LRV) / k
+        );
+    }
+
+    public void setMotorPowers(double leftFrontPower, double leftBackPower, double rightBackPower, double rightFrontPower) {
+        leftFront.setPower(leftFrontPower);
+        leftBack.setPower(leftBackPower);
+        rightFront.setPower(rightFrontPower);
+        rightBack.setPower(rightBackPower);
     }
 
     public static class Params {
         // IMU orientation
         // TODO: fill in these values based on
         //   see https://ftc-docs.firstinspires.org/en/latest/programming_resources/imu/imu.html?highlight=imu#physical-hub-mounting
-        public RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.UP;
-        public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+        public final RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
+                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
+        public final RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
+                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
 
         // drive model parameters
-        public double inPerTick = 1 / DriveConstants.TICKS_PER_INCH;
-        public double lateralInPerTick = 1;
-        public double trackWidthTicks = DriveConstants.TRACK_WIDTH / inPerTick;
+        public final double inPerTick = 1 / DriveConstants.TICKS_PER_INCH;
+        public final double lateralInPerTick = 1;
+        public final double trackWidthTicks = TRACK_WIDTH / inPerTick;
 
         // feedforward parameters (in tick units)
-        public double kS = DriveConstants.kStatic;
-        public double kV = DriveConstants.kV;
-        public double kA = DriveConstants.kA;
+        public final double kS = DriveConstants.kStatic;
+        public final double kV = DriveConstants.kV;
+        public final double kA = DriveConstants.kA;
 
         // path profile parameters (in inches)
-        public double maxWheelVel = 50;
-        public double minProfileAccel = -30;
-        public double maxProfileAccel = 50;
+        public final double maxWheelVel = 50;
+        public final double minProfileAccel = -30;
+        public final double maxProfileAccel = 50;
 
         // turn profile parameters (in radians)
-        public double maxAngVel = Math.PI; // shared with path
-        public double maxAngAccel = Math.PI;
+        public final double maxAngVel = Math.PI; // shared with path
+        public final double maxAngAccel = Math.PI;
 
         // path controller gains
-        public double axialGain = 0.0;
-        public double lateralGain = 0.0;
-        public double headingGain = 0.0; // shared with turn
+        public final double axialGain = 0.0;
+        public final double lateralGain = 0.0;
+        public final double headingGain = 0.0; // shared with turn
 
-        public double axialVelGain = 0.0;
-        public double lateralVelGain = 0.0;
-        public double headingVelGain = 0.0; // shared with turn
+        public final double axialVelGain = 0.0;
+        public final double lateralVelGain = 0.0;
+        public final double headingVelGain = 0.0; // shared with turn
     }
 
-    public static Params PARAMS = new Params();
+    public static final Params PARAMS = new Params();
 
     public final MecanumKinematics kinematics = new MecanumKinematics(
             PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
@@ -300,6 +406,19 @@ public final class MecanumDrive {
         leftBack.setPower(wheelVels.leftBack.get(0) / maxPowerMag);
         rightBack.setPower(wheelVels.rightBack.get(0) / maxPowerMag);
         rightFront.setPower(wheelVels.rightFront.get(0) / maxPowerMag);
+    }
+
+    public static final class ThreadedAction extends Thread {
+        private final Action path;
+
+        public ThreadedAction(Action path) {
+            this.path = path;
+        }
+
+        public void run() {
+            TelemetryPacket packet = new TelemetryPacket();
+            path.run(packet);
+        }
     }
 
     public final class FollowTrajectoryAction implements Action {
