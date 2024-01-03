@@ -1,12 +1,12 @@
-package org.firstinspires.ftc.teamcode.messages;
+package org.firstinspires.ftc.teamcode.rr.messages;
 
 import com.acmerobotics.roadrunner.Pose2d;
 
 public final class PoseMessage {
-    public final long timestamp;
-    public final double x;
-    public final double y;
-    public final double heading;
+    public long timestamp;
+    public double x;
+    public double y;
+    public double heading;
 
     public PoseMessage(Pose2d pose) {
         this.timestamp = System.nanoTime();

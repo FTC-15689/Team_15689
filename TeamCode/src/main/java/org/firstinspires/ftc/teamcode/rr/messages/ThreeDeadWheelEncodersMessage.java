@@ -1,12 +1,12 @@
-package org.firstinspires.ftc.teamcode.messages;
+package org.firstinspires.ftc.teamcode.rr.messages;
 
 import com.acmerobotics.roadrunner.ftc.PositionVelocityPair;
 
 public final class ThreeDeadWheelEncodersMessage {
-    public final long timestamp;
-    public final PositionVelocityPair par0;
-    public final PositionVelocityPair par1;
-    public final PositionVelocityPair perp;
+    public long timestamp;
+    public PositionVelocityPair par0;
+    public PositionVelocityPair par1;
+    public PositionVelocityPair perp;
 
     public ThreeDeadWheelEncodersMessage(PositionVelocityPair par0, PositionVelocityPair par1, PositionVelocityPair perp) {
         this.timestamp = System.nanoTime();

@@ -1,13 +1,13 @@
-package org.firstinspires.ftc.teamcode.messages;
+package org.firstinspires.ftc.teamcode.rr.messages;
 
 import com.acmerobotics.roadrunner.ftc.PositionVelocityPair;
 
 import java.util.List;
 
 public final class TankEncodersMessage {
-    public final long timestamp;
-    public final PositionVelocityPair[] left;
-    public final PositionVelocityPair[] right;
+    public long timestamp;
+    public PositionVelocityPair[] left;
+    public PositionVelocityPair[] right;
 
     public TankEncodersMessage(List<PositionVelocityPair> left, List<PositionVelocityPair> right) {
         this.timestamp = System.nanoTime();

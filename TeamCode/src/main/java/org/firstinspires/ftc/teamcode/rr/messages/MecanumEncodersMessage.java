@@ -1,13 +1,13 @@
-package org.firstinspires.ftc.teamcode.messages;
+package org.firstinspires.ftc.teamcode.rr.messages;
 
 import com.acmerobotics.roadrunner.ftc.PositionVelocityPair;
 
 public final class MecanumEncodersMessage {
-    public final long timestamp;
-    public final PositionVelocityPair leftFront;
-    public final PositionVelocityPair leftBack;
-    public final PositionVelocityPair rightBack;
-    public final PositionVelocityPair rightFront;
+    public long timestamp;
+    public PositionVelocityPair leftFront;
+    public PositionVelocityPair leftBack;
+    public PositionVelocityPair rightBack;
+    public PositionVelocityPair rightFront;
 
     public MecanumEncodersMessage(PositionVelocityPair leftFront, PositionVelocityPair leftBack, PositionVelocityPair rightBack, PositionVelocityPair rightFront) {
         this.timestamp = System.nanoTime();

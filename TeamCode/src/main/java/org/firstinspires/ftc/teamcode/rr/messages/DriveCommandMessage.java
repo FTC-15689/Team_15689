@@ -1,16 +1,16 @@
-package org.firstinspires.ftc.teamcode.messages;
+package org.firstinspires.ftc.teamcode.rr.messages;
 
 import com.acmerobotics.roadrunner.PoseVelocity2dDual;
 import com.acmerobotics.roadrunner.Time;
 
 public final class DriveCommandMessage {
-    public final long timestamp;
-    public final double forwardVelocity;
-    public final double forwardAcceleration;
-    public final double lateralVelocity;
-    public final double lateralAcceleration;
-    public final double angularVelocity;
-    public final double angularAcceleration;
+    public long timestamp;
+    public double forwardVelocity;
+    public double forwardAcceleration;
+    public double lateralVelocity;
+    public double lateralAcceleration;
+    public double angularVelocity;
+    public double angularAcceleration;
 
     public DriveCommandMessage(PoseVelocity2dDual<Time> poseVelocity) {
         this.timestamp = System.nanoTime();

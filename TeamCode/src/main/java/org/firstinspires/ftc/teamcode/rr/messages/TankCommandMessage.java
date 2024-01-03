@@ -1,10 +1,10 @@
-package org.firstinspires.ftc.teamcode.messages;
+package org.firstinspires.ftc.teamcode.rr.messages;
 
 public final class TankCommandMessage {
-    public final long timestamp;
-    public final double voltage;
-    public final double leftPower;
-    public final double rightPower;
+    public long timestamp;
+    public double voltage;
+    public double leftPower;
+    public double rightPower;
 
     public TankCommandMessage(double voltage, double leftPower, double rightPower) {
         this.timestamp = System.nanoTime();

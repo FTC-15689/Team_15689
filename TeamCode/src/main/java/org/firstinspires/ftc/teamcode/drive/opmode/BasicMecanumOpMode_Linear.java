@@ -29,12 +29,11 @@
 
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
-import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.Drive;
 
 /**
  * This file contains an example of a Linear "OpMode".
@@ -64,7 +63,7 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="!Basic: Mecanum Linear OpMode", group="Linear Opmode")
+@TeleOp(name = "!Basic: Mecanum Linear OpMode", group = "Linear Opmode")
 public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
@@ -75,8 +74,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        Pose2d empty_pose = new Pose2d(0,0,0);
-        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap, empty_pose);
+        Drive mecanumDriver = new Drive(this);
 
 
         // Wait for the game to start (driver presses PLAY)
@@ -95,7 +93,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             double lateral = gamepad1.left_stick_x;
             double yaw = -gamepad1.right_stick_y + gamepad1.right_stick_x;
 
-            double liftPower = gamepad2.right_trigger - gamepad2.left_trigger;
+//            double liftPower = gamepad2.right_trigger - gamepad2.left_trigger;
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
@@ -111,19 +109,14 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             max = Math.max(max, Math.abs(rightBackPower));
 
             if (max > 1.0) {
-                leftFrontPower  /= max;
+                leftFrontPower /= max;
                 rightFrontPower /= max;
-                leftBackPower   /= max;
+                leftBackPower /= max;
                 rightBackPower /= max;
             }
 
             // Send calculated power to wheels
-            mecanumDriver.setMotorPowers(
-                    leftFrontPower,
-                    leftBackPower,
-                    rightBackPower,
-                    rightFrontPower
-            );
+            mecanumDriver.setMotorPowers(leftBackPower, leftFrontPower, rightBackPower, rightFrontPower);
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime);
@@ -131,4 +124,5 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.update();
         }
-    }}
+    }
+}

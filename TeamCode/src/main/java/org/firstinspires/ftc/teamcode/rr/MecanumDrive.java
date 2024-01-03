@@ -1,6 +1,4 @@
-package org.firstinspires.ftc.teamcode.drive;
-
-import static org.firstinspires.ftc.teamcode.drive.DriveConstants.TRACK_WIDTH;
+package org.firstinspires.ftc.teamcode.rr;
 
 import androidx.annotation.NonNull;
 
@@ -16,7 +14,6 @@ import com.acmerobotics.roadrunner.HolonomicController;
 import com.acmerobotics.roadrunner.MecanumKinematics;
 import com.acmerobotics.roadrunner.MinVelConstraint;
 import com.acmerobotics.roadrunner.MotorFeedforward;
-import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Pose2dDual;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
@@ -44,14 +41,13 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.PIDCoefficients;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.messages.DriveCommandMessage;
-import org.firstinspires.ftc.teamcode.messages.MecanumCommandMessage;
-import org.firstinspires.ftc.teamcode.messages.MecanumEncodersMessage;
-import org.firstinspires.ftc.teamcode.messages.PoseMessage;
+import org.firstinspires.ftc.teamcode.rr.messages.DriveCommandMessage;
+import org.firstinspires.ftc.teamcode.rr.messages.MecanumCommandMessage;
+import org.firstinspires.ftc.teamcode.rr.messages.MecanumEncodersMessage;
+import org.firstinspires.ftc.teamcode.rr.messages.PoseMessage;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -59,201 +55,45 @@ import java.util.List;
 
 @Config
 public final class MecanumDrive {
-    public static final PIDCoefficients HEADING_PID = new PIDCoefficients(10, 0, 0);
-    public static final PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(0, 0, 0);
-    public static final double VX_WEIGHT = 1;
-    public static final double VY_WEIGHT = 1;
-    public static final double OMEGA_WEIGHT = 1;
-    public static final double LATERAL_MULTIPLIER = 1.0;
-    private boolean isBusy = false;
-
-    public void setMode(DcMotor.RunMode runMode) {
-        this.leftFront.setMode(runMode);
-        this.rightFront.setMode(runMode);
-        this.leftBack.setMode(runMode);
-        this.rightFront.setMode(runMode);
-    }
-
-    public Vector2d rotate(Vector2d vector, Double angle) {
-        double rx = (vector.x * Math.cos(angle)) - (vector.y * Math.sin(angle));
-        double ry = (vector.x * Math.sin(angle)) + (vector.y * Math.cos(angle));
-
-        return new Vector2d(rx, ry);
-    }
-
-    public void setWeightedDrivePower(Pose2d drivePower) {
-        Pose2d vel = drivePower;
-
-        if (Math.abs(drivePower.position.x) + Math.abs(drivePower.position.y)
-                + Math.abs(drivePower.heading.toDouble()) > 1) {
-            // re-normalize the powers according to the weights
-            double denom = VX_WEIGHT * Math.abs(drivePower.position.x)
-                    + VY_WEIGHT * Math.abs(drivePower.position.y)
-                    + OMEGA_WEIGHT * Math.abs(drivePower.heading.toDouble());
-
-            vel = new Pose2d(
-                    VX_WEIGHT * drivePower.position.x / denom,
-                    VY_WEIGHT * drivePower.position.y / denom,
-                    OMEGA_WEIGHT * drivePower.heading.toDouble() / denom
-            );
-        }
-
-        setDrivePower(vel);
-    }
-
-    public void setDrivePower(Pose2d vel) {
-        setDrivePowers(new PoseVelocity2d(
-                vel.position,
-                vel.heading.toDouble()
-        ));
-    }
-
-    public void setPoseEstimate(Pose2d emptyPose) {
-        pose = new Pose2d(emptyPose.position, emptyPose.heading.toDouble());
-    }
-
-    public void setPoseEstimate() {
-        pose = new Pose2d(0, 0, 0);
-    }
-
-    public Pose2d getPoseEstimate() {
-        updatePoseEstimate();
-        return new Pose2d(pose.position, pose.heading.toDouble());
-    }
-
-    public boolean isBusy() {
-        return isBusy;
-    }
-
-    /**
-     * @param path_id valid ids:
-     *                <p>
-     *                0 - Park as RED
-     *                <p>
-     *                1 - Park as BLUE
-     *                <p>
-     *                2 - Go to RED Tape Marks
-     *                <p>
-     *                3 - Go to BLUE Tape Marks
-     * @return The built trajectory sequence
-     */
-    public Action genPath(int path_id) {
-        switch (path_id) {
-            case 0:
-                // Park as RED
-                return actionBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
-                        .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
-                        .lineToX(12.0)
-                        .lineToY(63.0)
-                        .build();
-            case 1:
-                // Park as BLUE
-                return actionBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
-                        .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
-                        .lineToX(-12.0)
-                        .lineToY(63.0)
-                        .build();
-            case 2:
-                // Go to RED Tape Marks
-                return actionBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
-                        .splineTo(new Vector2d(54.00, -35.00), Math.toRadians(180.00))
-                        .build();
-            case 3:
-                // Go to BLUE Tape Marks
-                return actionBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
-                        .splineTo(new Vector2d(-54.00, -35.00), Math.toRadians(0.00))
-                        .build();
-            default:
-                // Do nothing
-                return new NullAction();
-        }
-    }
-
-    public void turnAsync(double radians) {
-        followActionAsync(actionBuilder(getPoseEstimate())
-                .turn(radians)
-                .build());
-    }
-
-    public void followAction(Action path) {
-        isBusy = true;
-        Thread t1 = followActionAsync(path);
-        while (t1.isAlive() && !t1.isInterrupted()) {
-            Thread.yield();
-        }
-        isBusy = false;
-
-        updatePoseEstimate();
-    }
-
-    private Thread followActionAsync(Action path) {
-        Thread follower = new ThreadedAction(path);
-        follower.start();
-        return follower;
-    }
-
-    public PoseVelocity2d getPoseVelocity() {
-        double LFV = leftFront.getVelocity();
-        double LRV = leftBack.getVelocity();
-        double RFV = rightFront.getVelocity();
-        double RRV = rightBack.getVelocity();
-        double k = TRACK_WIDTH;
-
-        return new PoseVelocity2d(
-                new Vector2d(
-                    (LFV + LRV + RFV + RRV),
-                    (LRV + RFV - LFV - RRV)
-                ),
-                (RRV + RFV - LFV - LRV) / k
-        );
-    }
-
-    public void setMotorPowers(double leftFrontPower, double leftBackPower, double rightBackPower, double rightFrontPower) {
-        leftFront.setPower(leftFrontPower);
-        leftBack.setPower(leftBackPower);
-        rightFront.setPower(rightFrontPower);
-        rightBack.setPower(rightBackPower);
-    }
-
     public static class Params {
         // IMU orientation
         // TODO: fill in these values based on
         //   see https://ftc-docs.firstinspires.org/en/latest/programming_resources/imu/imu.html?highlight=imu#physical-hub-mounting
-        public final RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
-        public final RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
+        public RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
+                RevHubOrientationOnRobot.LogoFacingDirection.UP;
+        public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
+                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
 
         // drive model parameters
-        public final double inPerTick = 1 / DriveConstants.TICKS_PER_INCH;
-        public final double lateralInPerTick = 1;
-        public final double trackWidthTicks = TRACK_WIDTH / inPerTick;
+        public double inPerTick = 0;
+        public double lateralInPerTick = 1;
+        public double trackWidthTicks = 0;
 
         // feedforward parameters (in tick units)
-        public final double kS = DriveConstants.kStatic;
-        public final double kV = DriveConstants.kV;
-        public final double kA = DriveConstants.kA;
+        public double kS = 0;
+        public double kV = 0;
+        public double kA = 0;
 
         // path profile parameters (in inches)
-        public final double maxWheelVel = 50;
-        public final double minProfileAccel = -30;
-        public final double maxProfileAccel = 50;
+        public double maxWheelVel = 50;
+        public double minProfileAccel = -30;
+        public double maxProfileAccel = 50;
 
         // turn profile parameters (in radians)
-        public final double maxAngVel = Math.PI; // shared with path
-        public final double maxAngAccel = Math.PI;
+        public double maxAngVel = Math.PI; // shared with path
+        public double maxAngAccel = Math.PI;
 
         // path controller gains
-        public final double axialGain = 0.0;
-        public final double lateralGain = 0.0;
-        public final double headingGain = 0.0; // shared with turn
+        public double axialGain = 0.0;
+        public double lateralGain = 0.0;
+        public double headingGain = 0.0; // shared with turn
 
-        public final double axialVelGain = 0.0;
-        public final double lateralVelGain = 0.0;
-        public final double headingVelGain = 0.0; // shared with turn
+        public double axialVelGain = 0.0;
+        public double lateralVelGain = 0.0;
+        public double headingVelGain = 0.0; // shared with turn
     }
 
-    public static final Params PARAMS = new Params();
+    public static Params PARAMS = new Params();
 
     public final MecanumKinematics kinematics = new MecanumKinematics(
             PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
@@ -274,8 +114,8 @@ public final class MecanumDrive {
 
     public final IMU imu;
 
-    public static Localizer localizer;
-    public static Pose2d pose;
+    public final Localizer localizer;
+    public Pose2d pose;
 
     private final LinkedList<Pose2d> poseHistory = new LinkedList<>();
 
@@ -353,10 +193,8 @@ public final class MecanumDrive {
         }
     }
 
-    public MecanumDrive(HardwareMap hardwareMap, Pose2d pose) {
-        if (pose.heading.toDouble() != 0.0 && !pose.position.equals(new Vector2d(0, 0))) {
-            MecanumDrive.pose = pose;
-        }
+    public MecanumDrive(HardwareMap hardwareMap) {
+        this.pose = new Pose2d(0,0,0);
 
         LynxFirmware.throwIfModulesAreOutdated(hardwareMap);
 
@@ -408,19 +246,6 @@ public final class MecanumDrive {
         rightFront.setPower(wheelVels.rightFront.get(0) / maxPowerMag);
     }
 
-    public static final class ThreadedAction extends Thread {
-        private final Action path;
-
-        public ThreadedAction(Action path) {
-            this.path = path;
-        }
-
-        public void run() {
-            TelemetryPacket packet = new TelemetryPacket();
-            path.run(packet);
-        }
-    }
-
     public final class FollowTrajectoryAction implements Action {
         public final TimeTrajectory timeTrajectory;
         private double beginTs = -1;
@@ -452,7 +277,15 @@ public final class MecanumDrive {
                 t = Actions.now() - beginTs;
             }
 
-            if (t >= timeTrajectory.duration) {
+            Pose2dDual<Time> txWorldTarget = timeTrajectory.get(t);
+            targetPoseWriter.write(new PoseMessage(txWorldTarget.value()));
+
+            PoseVelocity2d robotVelRobot = updatePoseEstimate();
+            Pose2d error = txWorldTarget.value().minusExp(pose);
+
+            if ((t >= timeTrajectory.duration && error.position.norm() < 2
+                    && robotVelRobot.linearVel.norm() < 0.5)
+                    || t + 1 >= timeTrajectory.duration) {
                 leftFront.setPower(0);
                 leftBack.setPower(0);
                 rightBack.setPower(0);
@@ -460,11 +293,6 @@ public final class MecanumDrive {
 
                 return false;
             }
-
-            Pose2dDual<Time> txWorldTarget = timeTrajectory.get(t);
-            targetPoseWriter.write(new PoseMessage(txWorldTarget.value()));
-
-            PoseVelocity2d robotVelRobot = updatePoseEstimate();
 
             PoseVelocity2dDual<Time> command = new HolonomicController(
                     PARAMS.axialGain, PARAMS.lateralGain, PARAMS.headingGain,
@@ -495,7 +323,6 @@ public final class MecanumDrive {
             p.put("y", pose.position.y);
             p.put("heading (deg)", Math.toDegrees(pose.heading.toDouble()));
 
-            Pose2d error = txWorldTarget.value().minusExp(pose);
             p.put("xError", error.position.x);
             p.put("yError", error.position.y);
             p.put("headingError (deg)", Math.toDegrees(error.heading.toDouble()));
