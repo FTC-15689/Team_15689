@@ -29,6 +29,13 @@ public class Park_BLUE extends LinearOpMode {
             return;
         }
 
-        Actions.runBlocking(mecanumDriver.drive.actionBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00))).splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00)).lineToY(63.00).build());
+        Actions.runBlocking(
+                mecanumDriver.drive.actionBuilder(
+                        new Pose2d(-63.00, -35.00, Math.toRadians(0.00))
+                )
+                        .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
+                        .lineToY(63.00)
+                        .build()
+        );
     }
 }

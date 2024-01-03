@@ -27,12 +27,13 @@ public class Park_RED extends LinearOpMode {
 
         if (isStopRequested()) {return;}
 
-//        mecanumDriver.followAction(Park_Red);
-//        while (mecanumDriver.isBusy()) {idle();}
-        Actions.runBlocking(mecanumDriver.drive.actionBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
-                .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
-                .lineToY(63.00)
-                .build()
+        Actions.runBlocking(
+                mecanumDriver.drive.actionBuilder(
+                        new Pose2d(63.00, -35.00, Math.toRadians(180.00))
+                )
+                        .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
+                        .lineToY(63.00)
+                        .build()
         );
     }
 }

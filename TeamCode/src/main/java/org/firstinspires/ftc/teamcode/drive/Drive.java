@@ -59,6 +59,14 @@ public class Drive {
     public void init() {
         // Define and Initialize Motors (note: need to use reference to actual OpMode).
         drive = new MecanumDrive(myOpMode.hardwareMap);
+
+        MecanumDrive.PARAMS.kS = DriveConstants.kStatic;
+        MecanumDrive.PARAMS.kA = DriveConstants.kA;
+        MecanumDrive.PARAMS.kV = DriveConstants.kV;
+        MecanumDrive.PARAMS.inPerTick = 1 / DriveConstants.TICKS_PER_INCH;
+        MecanumDrive.PARAMS.usbFacingDirection = DriveConstants.USB_FACING_DIR;
+        MecanumDrive.PARAMS.logoFacingDirection = DriveConstants.LOGO_FACING_DIR;
+
         vision = new Vision(myOpMode.hardwareMap);
         vision.setExposure();
 
