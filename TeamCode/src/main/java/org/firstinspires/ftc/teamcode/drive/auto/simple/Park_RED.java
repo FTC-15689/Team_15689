@@ -18,7 +18,6 @@ public class Park_RED extends LinearOpMode {
         telemetry.addData("Starting at", 0);
         telemetry.update();
 
-        Pose2d empty_pose = new Pose2d(0,0,0);
         Drive mecanumDriver = new Drive(this);
 
         // Wait for the game to start (driver presses PLAY)
@@ -29,11 +28,18 @@ public class Park_RED extends LinearOpMode {
 
         Actions.runBlocking(
                 mecanumDriver.drive.actionBuilder(
-                        new Pose2d(63.00, -35.00, Math.toRadians(180.00))
-                )
+                                new Pose2d(63.00, -35.00, Math.toRadians(180.00))
+                        )
                         .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
-                        .lineToY(63.00)
+                        .splineTo(new Vector2d(12.00, 63.0), Math.toRadians(180.00))
                         .build()
         );
+
+//        while (mecanumDriver.isBusy()) {
+//            idle();
+//        }
+//
+//        telemetry.addLine("Finished parking.");
+//        telemetry.update();
     }
 }

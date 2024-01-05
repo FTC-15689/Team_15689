@@ -1,12 +1,10 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
-import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.drive.Drive;
 import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
@@ -24,20 +22,22 @@ public class LocalMecanum extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         // Initialize OldMecanumDrive
         Drive drive = new Drive(this);
-        FtcDashboard dash = FtcDashboard.getInstance();
 
         // We want to turn off velocity control for teleop
         // Velocity control per wheel is not necessary outside of motion profiled auto
         drive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        Telemetry dashTele = dash.getTelemetry();
 
         waitForStart();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive() && !isStopRequested()) {
-            drive.fieldCentricDriveRobot(gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x + gamepad1.right_stick_y, DriveConstants.MAX_VEL);
+            drive.fieldCentricDriveRobot(
+                    gamepad1.left_stick_y,
+                    gamepad1.left_stick_x,
+                    -gamepad1.right_stick_x + -gamepad1.right_stick_y,
+                    DriveConstants.MAX_VEL / 2
+            );
 
             // Print pose to telemetry
             Pose2d poseEstimate = drive.drive.pose;

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive;
 
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Rotation2d;
@@ -8,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.teamcode.drive.utils.ActionHandler;
 import org.firstinspires.ftc.teamcode.drive.utils.TelemetryUtils;
 import org.firstinspires.ftc.teamcode.drive.utils.Vision;
 import org.firstinspires.ftc.teamcode.rr.MecanumDrive;
@@ -48,6 +50,7 @@ public class Drive {
 
     // Define Drive constants.
     private final Pose2d INITIAL_POSE = new Pose2d(0, 0, 0);
+    private ActionHandler handler;
 
     // Define a constructor that allows the OpMode to pass a reference to itself.
     public Drive(LinearOpMode opMode) {
@@ -67,8 +70,7 @@ public class Drive {
         MecanumDrive.PARAMS.usbFacingDirection = DriveConstants.USB_FACING_DIR;
         MecanumDrive.PARAMS.logoFacingDirection = DriveConstants.LOGO_FACING_DIR;
 
-        vision = new Vision(myOpMode.hardwareMap);
-        vision.setExposure();
+        handler = new ActionHandler(myOpMode);
 
         myOpMode.telemetry.addData(">", "Hardware Initialized");
         myOpMode.telemetry.update();
@@ -147,5 +149,12 @@ public class Drive {
 
     public Pose2d getINITIAL_POSE() {
         return INITIAL_POSE;
+    }
+
+    public void followAsync(Action action) {
+        handler.followAsync(action);
+    }
+    public boolean isBusy() {
+        return handler.isBusy();
     }
 }
