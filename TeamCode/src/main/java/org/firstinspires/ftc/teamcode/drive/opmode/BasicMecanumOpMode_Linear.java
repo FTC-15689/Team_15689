@@ -29,8 +29,11 @@
 
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
@@ -63,19 +66,89 @@ import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="!Basic: Mecanum Linear OpMode", group="Linear Opmode")
+@TeleOp(name = "!Basic: Mecanum Linear OpMode", group = "Linear Opmode")
 public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
     private final ElapsedTime runtime = new ElapsedTime();
+    private MecanumDrive mecanumDriver;
+
+    public void robotCenter() {
+        double max;
+
+        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
+        double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+        double lateral = gamepad1.left_stick_x;
+        double yaw = -gamepad1.right_stick_y + gamepad1.right_stick_x;
+
+        double liftPower = gamepad2.right_trigger - gamepad2.left_trigger;
+
+        // Combine the joystick requests for each axis-motion to determine each wheel's power.
+        // Set up a variable for each drive wheel to save the power level for telemetry.
+        double leftFrontPower = axial + lateral + yaw;
+        double rightFrontPower = axial - lateral - yaw;
+        double leftBackPower = axial - lateral + yaw;
+        double rightBackPower = axial + lateral - yaw;
+
+        // Normalize the values so no wheel power exceeds 100%
+        // This ensures that the robot maintains the desired motion.
+        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
+        max = Math.max(max, Math.abs(leftBackPower));
+        max = Math.max(max, Math.abs(rightBackPower));
+
+        if (max > 1.0) {
+            leftFrontPower /= max;
+            rightFrontPower /= max;
+            leftBackPower /= max;
+            rightBackPower /= max;
+        }
+
+        // Send calculated power to wheels
+        mecanumDriver.setMotorPowers(leftFrontPower, leftBackPower, rightBackPower, rightFrontPower);
+        mecanumDriver.setExtra_motors(liftPower);
+
+        // Show the elapsed game time and wheel power.
+        telemetry.addData("Status", "Run Time: " + runtime);
+        telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
+        telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
+    }
+
+    public void fieldCenter() {
+        // Read pose
+        Pose2d poseEstimate = mecanumDriver.getPoseEstimate();
+
+        // Create a vector from the gamepad x/y inputs
+        // Then, rotate that vector by the inverse of that heading
+        Vector2d input = new Vector2d(-gamepad1.left_stick_y, -gamepad1.left_stick_x).rotated(-poseEstimate.getHeading());
+
+        // Pass in the rotated input + right stick value for rotation
+        // Rotation is not part of the rotated input thus must be passed in separately
+        mecanumDriver.setWeightedDrivePower(new Pose2d(input.getX(), input.getY(), -gamepad1.right_stick_x));
+        MecanumDrive.HEADING_PID.kP += gamepad1.dpad_up ? 1 : gamepad1.dpad_down ? -1 : 0;
+
+        // Update everything. Odometry. Etc.
+        mecanumDriver.update();
+
+        // Print pose to telemetry
+        telemetry.addData("x", poseEstimate.getX());
+        telemetry.addData("y", poseEstimate.getY());
+        telemetry.addData("heading", poseEstimate.getHeading());
+    }
 
     @Override
     public void runOpMode() {
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap);
+        mecanumDriver = new MecanumDrive(hardwareMap);
 
+        // We want to turn off velocity control for teleop
+        // Velocity control per wheel is not necessary outside of motion profiled auto
+        mecanumDriver.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        // Retrieve our pose from the PoseStorage.currentPose static field
+        // See AutoTransferPose.java for further details
+        mecanumDriver.setPoseEstimate(MecanumDrive.currentPos);
 
         // Wait for the game to start (driver presses PLAY)
         telemetry.addData("Status", "Initialized");
@@ -84,55 +157,25 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         waitForStart();
         runtime.reset();
 
+        boolean roboCenter = true;
+
         // run until the end of the match (driver presses STOP)
-        while (opModeIsActive()) {
-            double max;
-
-            // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            double lateral = gamepad1.left_stick_x;
-            double yaw = -gamepad1.right_stick_y + gamepad1.right_stick_x;
-
-            double liftPower = gamepad2.right_trigger - gamepad2.left_trigger;
-
-            // Combine the joystick requests for each axis-motion to determine each wheel's power.
-            // Set up a variable for each drive wheel to save the power level for telemetry.
-            double leftFrontPower = axial + lateral + yaw;
-            double rightFrontPower = axial - lateral - yaw;
-            double leftBackPower = axial - lateral + yaw;
-            double rightBackPower = axial + lateral - yaw;
-
-            // Normalize the values so no wheel power exceeds 100%
-            // This ensures that the robot maintains the desired motion.
-            max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
-            max = Math.max(max, Math.abs(leftBackPower));
-            max = Math.max(max, Math.abs(rightBackPower));
-
-            if (max > 1.0) {
-                leftFrontPower  /= max;
-                rightFrontPower /= max;
-                leftBackPower   /= max;
-                rightBackPower /= max;
+        while (opModeIsActive() && !isStopRequested()) {
+            if (gamepad1.dpad_up) {
+                roboCenter = !roboCenter;
             }
 
-            // Send calculated power to wheels
-            mecanumDriver.setMotorPowers(
-                    leftFrontPower,
-                    leftBackPower,
-                    rightBackPower,
-                    rightFrontPower
-            );
-            mecanumDriver.setExtra_motors(
-                    liftPower
-            );
-
-            // Show the elapsed game time and wheel power.
-            telemetry.addData("Status", "Run Time: " + runtime);
-            telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
-            telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
+            if (roboCenter) {
+                robotCenter();
+            } else {
+                fieldCenter();
+            }
+            telemetry.addLine();
+            telemetry.addData("Center:", roboCenter ? "Robot" : "Field");
             telemetry.update();
         }
 
         // immediately stop all motors
         mecanumDriver.brakeALL();
-    }}
+    }
+}
