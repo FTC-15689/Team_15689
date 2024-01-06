@@ -48,7 +48,6 @@ import org.firstinspires.ftc.teamcode.util.LynxModuleUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /*
@@ -75,7 +74,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     private final DcMotorEx rightRear;
     private final DcMotorEx rightFront;
     private final List<DcMotorEx> drive_motors;
-    private final List<DcMotorEx> extra_motors;
 
     private final IMU imu;
     private final VoltageSensor batteryVoltageSensor;
@@ -83,6 +81,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     private final List<Integer> lastEncPositions = new ArrayList<>();
     private final List<Integer> lastEncVels = new ArrayList<>();
     public static Pose2d currentPos = new Pose2d(0, 0, Math.toRadians(0));
+    public DcMotorEx convAng;
 
     public MecanumDrive(HardwareMap hardwareMap) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
@@ -106,9 +105,13 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         // drive motors
 
         leftFront = hardwareMap.get(DcMotorEx.class, "leftFront");
-        leftRear = hardwareMap.get(DcMotorEx.class, "leftRear");
-        rightRear = hardwareMap.get(DcMotorEx.class, "rightRear");
+        leftRear = hardwareMap.get(DcMotorEx.class, "leftBack");
+        rightRear = hardwareMap.get(DcMotorEx.class, "rightBack");
         rightFront = hardwareMap.get(DcMotorEx.class, "rightFront");
+
+        convAng = hardwareMap.get(DcMotorEx.class, "convAng");
+        convAng.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        convAng.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         drive_motors = Arrays.asList(leftFront, leftRear, rightRear, rightFront);
 
@@ -118,8 +121,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
             motor.setMotorType(motorConfigurationType);
         }
 
-        DcMotorEx liftMotor = hardwareMap.get(DcMotorEx.class, "liftMotor");
-        extra_motors = Collections.singletonList(liftMotor);
 
         if (RUN_USING_ENCODER) {
             setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -321,10 +322,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         rightFront.setPower(rf);
     }
 
-    public void setExtra_motors(double lm) {
-        extra_motors.get(0).setPower(lm);
-    }
-
     public void setTargets(int leftFrontT, int leftRearT, int rightRearT, int rightFrontT) {
         leftFront.setTargetPosition(leftFrontT);
         leftRear.setTargetPosition(leftRearT);
@@ -358,10 +355,6 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
 
     public void brakeALL() {
         for (DcMotorEx motor : drive_motors) {
-            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        }
-
-        for (DcMotorEx motor : extra_motors) {
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
     }

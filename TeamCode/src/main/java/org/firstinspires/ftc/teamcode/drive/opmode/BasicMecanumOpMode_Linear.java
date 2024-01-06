@@ -1,32 +1,3 @@
-/* Copyright (c) 2021 FIRST. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this list
- * of conditions and the following disclaimer.
- *
- * Redistributions in binary form must reproduce the above copyright notice, this
- * list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * Neither the name of FIRST nor the names of its contributors may be used to endorse or
- * promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
- * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
@@ -81,8 +52,6 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         double lateral = gamepad1.left_stick_x;
         double yaw = -gamepad1.right_stick_y + gamepad1.right_stick_x;
 
-        double liftPower = gamepad2.right_trigger - gamepad2.left_trigger;
-
         // Combine the joystick requests for each axis-motion to determine each wheel's power.
         // Set up a variable for each drive wheel to save the power level for telemetry.
         double leftFrontPower = axial + lateral + yaw;
@@ -105,7 +74,6 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // Send calculated power to wheels
         mecanumDriver.setMotorPowers(leftFrontPower, leftBackPower, rightBackPower, rightFrontPower);
-        mecanumDriver.setExtra_motors(liftPower);
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime);
@@ -135,6 +103,35 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         telemetry.addData("heading", poseEstimate.getHeading());
     }
 
+    public void actions() {
+        // conveyor tilt gear ratio: 600:1
+        double sweep_speed = gamepad2.right_trigger - gamepad2.left_trigger;
+        double targetConveyorAngle = 0;
+
+        if (gamepad2.dpad_right) {
+            targetConveyorAngle += 15.0;
+        } else if (gamepad2.dpad_left) {
+            targetConveyorAngle -= 15.0;
+        }
+
+        if (gamepad2.dpad_up) {
+            targetConveyorAngle += 5.0;
+        } else if (gamepad2.dpad_down) {
+            targetConveyorAngle -= 5.0;
+        }
+
+        double convRevs = (targetConveyorAngle / 360 * 100);
+
+        if (convRevs != 0.0) {
+            mecanumDriver.convAng.setPower(convRevs > 0.0 ? 1.0 : -1.0);
+            mecanumDriver.convAng.setTargetPosition((int) (mecanumDriver.convAng.getCurrentPosition() + convRevs));
+        } else if (!mecanumDriver.convAng.isBusy()) {
+            mecanumDriver.convAng.setPower(0.0);
+            mecanumDriver.convAng.setTargetPosition(mecanumDriver.convAng.getCurrentPosition());
+        }
+        telemetry.addData("Target delta/actual", String.format("%s, %s", convRevs, mecanumDriver.convAng.getTargetPosition()));
+    }
+
     @Override
     public void runOpMode() {
 
@@ -145,6 +142,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         // We want to turn off velocity control for teleop
         // Velocity control per wheel is not necessary outside of motion profiled auto
         mecanumDriver.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        mecanumDriver.convAng.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         // Retrieve our pose from the PoseStorage.currentPose static field
         // See AutoTransferPose.java for further details
@@ -170,6 +168,9 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             } else {
                 fieldCenter();
             }
+
+            actions();
+
             telemetry.addLine();
             telemetry.addData("Center:", roboCenter ? "Robot" : "Field");
             telemetry.update();
