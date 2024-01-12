@@ -112,7 +112,7 @@ public class TFDetect extends LinearOpMode {
                     hardwareMap.get(WebcamName.class, "Webcam 1"), tfod);
         } else {
             visionPortal = VisionPortal.easyCreateWithDefaults(
-                    BuiltinCameraDirection.BACK, tfod);
+                    BuiltinCameraDirection.FRONT, tfod);
         }
 
     }   // end method initTfod()

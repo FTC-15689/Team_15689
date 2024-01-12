@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.auto.simple;
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -8,8 +9,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 
-@Autonomous(name = "!PARk: BLUE", group = "Robot")
-public class Park_BLUE extends LinearOpMode {
+@Autonomous(name = "!PARk: B BLUE", group = "Auto_BackStage")
+public class Park_BLUEB extends LinearOpMode {
     private final ElapsedTime runtime = new ElapsedTime();
     @Override
     public void runOpMode() {
@@ -17,12 +18,15 @@ public class Park_BLUE extends LinearOpMode {
         telemetry.addData("Starting at", 0);
         telemetry.update();
 
-        MecanumDrive mecanumDriver = new MecanumDrive(hardwareMap);
+        MecanumDrive drive = new MecanumDrive(hardwareMap);
 
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
-        mecanumDriver.setPoseEstimate(startPose);
+        drive.setPoseEstimate(startPose);
 
-        TrajectorySequence Park_Blue = mecanumDriver.genPath(1);
+        TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(50.00, 36.00, Math.toRadians(360.00)))
+                .lineTo(new Vector2d(12.00, 36.00))
+                .lineTo(new Vector2d(12.00, 63.00))
+                .build();
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
@@ -30,7 +34,7 @@ public class Park_BLUE extends LinearOpMode {
 
         if (isStopRequested()) {return;}
 
-        mecanumDriver.followTrajectorySequence(Park_Blue);
-        mecanumDriver.getPoseEst();
+        drive.followTrajectorySequence(Park_Blue);
+        drive.getPoseEst();
     }
 }

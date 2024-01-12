@@ -43,6 +43,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
     // Declare OpMode members for each of the 4 motors.
     private final ElapsedTime runtime = new ElapsedTime();
     private MecanumDrive mecanumDriver;
+    private static double convRevs;
 
     public void robotCenter() {
         double max;
@@ -50,7 +51,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
         double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
         double lateral = gamepad1.left_stick_x;
-        double yaw = -gamepad1.right_stick_y + gamepad1.right_stick_x;
+        double yaw = (-gamepad1.right_stick_y + gamepad1.right_stick_x) * 0.75;
 
         // Combine the joystick requests for each axis-motion to determine each wheel's power.
         // Set up a variable for each drive wheel to save the power level for telemetry.
@@ -87,7 +88,10 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // Create a vector from the gamepad x/y inputs
         // Then, rotate that vector by the inverse of that heading
-        Vector2d input = new Vector2d(-gamepad1.left_stick_y, -gamepad1.left_stick_x).rotated(-poseEstimate.getHeading());
+        Vector2d input = new Vector2d(
+                -gamepad1.left_stick_y,
+                -gamepad1.left_stick_x
+        ).rotated(-poseEstimate.getHeading());
 
         // Pass in the rotated input + right stick value for rotation
         // Rotation is not part of the rotated input thus must be passed in separately
@@ -106,6 +110,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
     public void actions() {
         // conveyor tilt gear ratio: 600:1
         double sweep_speed = gamepad2.right_trigger - gamepad2.left_trigger;
+
         double targetConveyorAngle = 0;
 
         if (gamepad2.dpad_right) {
@@ -120,16 +125,36 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             targetConveyorAngle -= 5.0;
         }
 
-        double convRevs = (targetConveyorAngle / 360 * 100);
+        convRevs = (targetConveyorAngle * 0.25);
 
         if (convRevs != 0.0) {
-            mecanumDriver.convAng.setPower(convRevs > 0.0 ? 1.0 : -1.0);
+            mecanumDriver.convAng.setPower(Math.signum(convRevs) * 0.35);
             mecanumDriver.convAng.setTargetPosition((int) (mecanumDriver.convAng.getCurrentPosition() + convRevs));
         } else if (!mecanumDriver.convAng.isBusy()) {
             mecanumDriver.convAng.setPower(0.0);
             mecanumDriver.convAng.setTargetPosition(mecanumDriver.convAng.getCurrentPosition());
         }
-        telemetry.addData("Target delta/actual", String.format("%s, %s", convRevs, mecanumDriver.convAng.getTargetPosition()));
+        telemetry.addData(
+                "Target Degrees, Raw, Remaining",
+                String.format("%s, %s, %s",
+                        targetConveyorAngle,
+                        convRevs,
+                        mecanumDriver.convAng.getTargetPosition() - mecanumDriver.convAng.getCurrentPosition()
+                )
+        );
+
+        // servos
+        if (sweep_speed != 0.0) {
+            mecanumDriver.swp0.setPower(sweep_speed);
+            mecanumDriver.swp1.setPower(-sweep_speed);
+        } else {
+            mecanumDriver.swp0.setPower(0.0);
+            mecanumDriver.swp1.setPower(0.0);
+        }
+        telemetry.addData("Sweep speed:", mecanumDriver.swp0.getPower() - mecanumDriver.swp1.getPower());
+
+        // conveyor movement
+        mecanumDriver.conv.setPower(gamepad2.right_stick_x);
     }
 
     @Override
@@ -142,7 +167,8 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         // We want to turn off velocity control for teleop
         // Velocity control per wheel is not necessary outside of motion profiled auto
         mecanumDriver.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        mecanumDriver.convAng.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        mecanumDriver.convAng.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         // Retrieve our pose from the PoseStorage.currentPose static field
         // See AutoTransferPose.java for further details
@@ -155,12 +181,24 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         waitForStart();
         runtime.reset();
 
+        mecanumDriver.convAng.setTargetPosition(0);
+        mecanumDriver.convAng.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        mecanumDriver.convAng.setVelocity(1);
+
         boolean roboCenter = true;
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive() && !isStopRequested()) {
             if (gamepad1.dpad_up) {
                 roboCenter = !roboCenter;
+                while (gamepad1.dpad_up) {
+                    idle();
+                }
+            }
+            if (gamepad1.dpad_down) {
+                // reset the heading
+                Pose2d cur = mecanumDriver.getPoseEstimate();
+                mecanumDriver.setPoseEstimate(new Pose2d(cur.getX(), cur.getY(), 0.0));
             }
 
             if (roboCenter) {
@@ -171,8 +209,18 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
             actions();
 
+            String cross = " \\   /\n  \\ /\n  / \\\n /   \\";
+            // \   /
+            //  \ /
+            //  / \
+            // /   \
+            String circle = "/---\\\n|   |\n\\---/";
+            // /---\
+            // |   |
+            // \---/
+
             telemetry.addLine();
-            telemetry.addData("Center:", roboCenter ? "Robot" : "Field");
+            telemetry.addData("Center:", roboCenter ? circle : cross);
             telemetry.update();
         }
 

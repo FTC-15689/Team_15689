@@ -8,8 +8,6 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class CapstonePipeline extends OpenCvPipeline {
@@ -32,11 +30,9 @@ public class CapstonePipeline extends OpenCvPipeline {
     final Scalar BLUE = new Scalar(0, 0, 255);
     final Scalar WHITE = new Scalar(255, 255, 255);
 
-    // TODO: Check Directions
-    final Point LEFT_TOPLEFT_ANCHOR_POINT = new Point(0, 0);
-
     final int REGION_WIDTH = 1280 / 3;
-    final int REGION_HEIGHT = 720;
+    final int REGION_HEIGHT = (int) (720.0 / 3.0 * 2.0);
+    final Point LEFT_TOPLEFT_ANCHOR_POINT = new Point(0, REGION_HEIGHT);
 
     final Point CENTER_TOPLEFT_ANCHOR_POINT = new Point(LEFT_TOPLEFT_ANCHOR_POINT.x + REGION_WIDTH, 0);
     final Point RIGHT_TOPLEFT_ANCHOR_POINT = new Point(CENTER_TOPLEFT_ANCHOR_POINT.x + REGION_WIDTH, 0);
@@ -177,7 +173,8 @@ public class CapstonePipeline extends OpenCvPipeline {
             } else {
                 position = CapstonePosition.RIGHT;
             }
-        } else {
+        }
+        else {
             leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
             centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
             rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));

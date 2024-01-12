@@ -31,9 +31,9 @@ import com.acmerobotics.roadrunner.trajectory.constraints.TrajectoryAcceleration
 import com.acmerobotics.roadrunner.trajectory.constraints.TrajectoryVelocityConstraint;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
@@ -81,6 +81,9 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     private final List<Integer> lastEncPositions = new ArrayList<>();
     private final List<Integer> lastEncVels = new ArrayList<>();
     public static Pose2d currentPos = new Pose2d(0, 0, Math.toRadians(0));
+    public final CRServo swp0;
+    public final CRServo swp1;
+    public final CRServo conv;
     public DcMotorEx convAng;
 
     public MecanumDrive(HardwareMap hardwareMap) {
@@ -110,8 +113,9 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         rightFront = hardwareMap.get(DcMotorEx.class, "rightFront");
 
         convAng = hardwareMap.get(DcMotorEx.class, "convAng");
-        convAng.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        convAng.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        swp0 = hardwareMap.get(CRServo.class, "swp0");
+        swp1 = hardwareMap.get(CRServo.class, "swp1");
+        conv = hardwareMap.get(CRServo.class, "convBlt");
 
         drive_motors = Arrays.asList(leftFront, leftRear, rightRear, rightFront);
 
@@ -133,8 +137,8 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         }
 
         // reverse some motor directions
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
+//        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+//        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
 
         List<Integer> lastTrackingEncPositions = new ArrayList<>();
         List<Integer> lastTrackingEncVels = new ArrayList<>();
@@ -396,15 +400,15 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         switch (path_id) {
             case 0:
                 // Park as RED
-                return trajectorySequenceBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
-                        .splineTo(new Vector2d(12.00, -35.00), Math.toRadians(180.00))
-                        .lineTo(new Vector2d(12.00, 63.00))
+                return trajectorySequenceBuilder(new Pose2d(-35.00, -63.00, Math.toRadians(90.00)))
+                        .splineTo(new Vector2d(-35.00, -36.00), Math.toRadians(90.00))
+                        .lineTo(new Vector2d(50.00, -36.00))
                         .build();
             case 1:
                 // Park as BLUE
-                return trajectorySequenceBuilder(new Pose2d(-63.00, -35.00, Math.toRadians(0.00)))
-                        .splineTo(new Vector2d(-12.00, -35.00), Math.toRadians(0.00))
-                        .lineTo(new Vector2d(-12.00, 63.00))
+                return trajectorySequenceBuilder(new Pose2d(-35.00, 63.00, Math.toRadians(270.00)))
+                        .splineTo(new Vector2d(-35.00, 36.00), Math.toRadians(-90.00))
+                        .lineTo(new Vector2d(50.00, 36.00))
                         .build();
             case 2:
                 // Go to RED Tape Marks
