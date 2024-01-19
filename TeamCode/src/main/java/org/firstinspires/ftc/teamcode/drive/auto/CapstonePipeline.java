@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.auto;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -8,6 +9,7 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class CapstonePipeline extends OpenCvPipeline {
@@ -31,8 +33,8 @@ public class CapstonePipeline extends OpenCvPipeline {
     final Scalar WHITE = new Scalar(255, 255, 255);
 
     final int REGION_WIDTH = 1280 / 3;
-    final int REGION_HEIGHT = (int) (720.0 / 3.0 * 2.0);
-    final Point LEFT_TOPLEFT_ANCHOR_POINT = new Point(0, REGION_HEIGHT);
+    final int REGION_HEIGHT = 720;
+    final Point LEFT_TOPLEFT_ANCHOR_POINT = new Point(0, 0);
 
     final Point CENTER_TOPLEFT_ANCHOR_POINT = new Point(LEFT_TOPLEFT_ANCHOR_POINT.x + REGION_WIDTH, 0);
     final Point RIGHT_TOPLEFT_ANCHOR_POINT = new Point(CENTER_TOPLEFT_ANCHOR_POINT.x + REGION_WIDTH, 0);
@@ -129,21 +131,32 @@ public class CapstonePipeline extends OpenCvPipeline {
             // convert the bgr
             Imgproc.cvtColor(input, input, Imgproc.COLOR_BGRA2BGR);
 
+            // create a luminosity mask and clip values that are relatively dark
+            Mat luminosity = extractChannel(input, 0);
+            CvType.
+            Core.add(luminosity, extractChannel(input, 2), luminosity);
+
+            Core.multiply(luminosity, Mat.ones(luminosity.size(), CvType.CV_8U), luminosity, 0.5);
+
+            luminosity = Core
+
+            Imgproc.adaptiveThreshold(luminosity, luminosity, 1, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 40);
+
+            Core.merge(Arrays.asList(luminosity, luminosity, luminosity), luminosity);
+            // multiply our luminosity mask against the image
+            Core.multiply(input, luminosity, input);
+
             // create a list of the channels and an empty list to store the differences of each channel
             double redMean = calcMeans(extractChannel(input, 0));
-            double greenMean = calcMeans(extractChannel(input, 1));
             double blueMean = calcMeans(extractChannel(input, 2));
 
-            double maxMean = Math.max(redMean, Math.max(greenMean, blueMean));
+            double maxMean = Math.max(redMean, blueMean);
 
             Mat targetChannel;
 
             if (maxMean == redMean) {
                 targetChannel = extractChannel(input, 0);
                 bestChannel = ColorMode.RED;
-            } else if (maxMean == greenMean) {
-                targetChannel = extractChannel(input, 1);
-                bestChannel = ColorMode.GREEN;
             } else if (maxMean == blueMean) {
                 targetChannel = extractChannel(input, 2);
                 bestChannel = ColorMode.BLUE;

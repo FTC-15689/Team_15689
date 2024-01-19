@@ -209,12 +209,12 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
             actions();
 
-            String cross = " \\   /\n  \\ /\n  / \\\n /   \\";
+            String cross = "\n \\   /\n  \\ /\n  / \\\n /   \\";
             // \   /
             //  \ /
             //  / \
             // /   \
-            String circle = "/---\\\n|   |\n\\---/";
+            String circle = "\n/---\\\n|   |\n\\---/";
             // /---\
             // |   |
             // \---/

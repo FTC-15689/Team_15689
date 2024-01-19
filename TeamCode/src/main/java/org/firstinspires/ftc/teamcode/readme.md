@@ -129,3 +129,19 @@ Note: Some names start with "Team" and others start with "team".  This is intent
 5)  Add:    include ':Team0417' to the "/settings.gradle" file.
     
 6)  Open up Android Studios and clean out any old files by using the menu to "Build/Clean Project""
+
+## Ducky Docs
+
+[Docs Page](https://rr.brott.dev/docs/v0-5/javadoc/)
+
+### Teleop
+
+The driving mode is `BasicMecanumOpMode_Linear` which contains options to switch from field oriented control and robot oriented control
+
+### Auto
+
+The two types, Park and CapstoneTest will park in the backstage and park on the team element.
+
+### Upgrading
+
+There are only a few gradle files to upgrade, the TeamCode build.gradle, the root build.dependencies.gradle, the root 
