@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import android.annotation.SuppressLint;
+
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -43,7 +45,15 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
     // Declare OpMode members for each of the 4 motors.
     private final ElapsedTime runtime = new ElapsedTime();
     private MecanumDrive mecanumDriver;
-    private static double convRevs;
+    private int hangTarget = 0;
+    private boolean hangBtnDown = false;
+    private boolean driveModeBtnDown = false;
+    private int paperState = 0;
+    private boolean paperBtnDown = false;
+
+    public double bounded(double num, double low, double high) {
+        return Math.min(high, Math.max(low, num));
+    }
 
     public void robotCenter() {
         double max;
@@ -88,10 +98,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // Create a vector from the gamepad x/y inputs
         // Then, rotate that vector by the inverse of that heading
-        Vector2d input = new Vector2d(
-                -gamepad1.left_stick_y,
-                -gamepad1.left_stick_x
-        ).rotated(-poseEstimate.getHeading());
+        Vector2d input = new Vector2d(-gamepad1.left_stick_y, -gamepad1.left_stick_x).rotated(-poseEstimate.getHeading());
 
         // Pass in the rotated input + right stick value for rotation
         // Rotation is not part of the rotated input thus must be passed in separately
@@ -107,9 +114,10 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         telemetry.addData("heading", poseEstimate.getHeading());
     }
 
+    @SuppressLint("DefaultLocale")
     public void actions() {
         // conveyor tilt gear ratio: 600:1
-        double sweep_speed = gamepad2.right_trigger - gamepad2.left_trigger;
+        double sweep_speed = gamepad2.right_trigger - gamepad2.left_trigger + gamepad1.right_trigger - gamepad1.left_trigger;
 
         double targetConveyorAngle = 0;
 
@@ -125,7 +133,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             targetConveyorAngle -= 5.0;
         }
 
-        convRevs = (targetConveyorAngle * 0.25);
+        double convRevs = (targetConveyorAngle * 0.25);
 
         if (convRevs != 0.0) {
             mecanumDriver.convAng.setPower(Math.signum(convRevs) * 0.35);
@@ -135,8 +143,9 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             mecanumDriver.convAng.setTargetPosition(mecanumDriver.convAng.getCurrentPosition());
         }
         telemetry.addData(
-                "Target Degrees, Raw, Remaining",
-                String.format("%s, %s, %s",
+                "Target Degrees, Raw, Remaining\n",
+                String.format(
+                        "%s, %s, %s",
                         targetConveyorAngle,
                         convRevs,
                         mecanumDriver.convAng.getTargetPosition() - mecanumDriver.convAng.getCurrentPosition()
@@ -144,14 +153,75 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         );
 
         // servos
+        // sweeper
         if (sweep_speed != 0.0) {
-            mecanumDriver.swp0.setPower(sweep_speed);
-            mecanumDriver.swp1.setPower(-sweep_speed);
+            mecanumDriver.swp0.setPower(bounded(sweep_speed, -1.0, 1.0));
+            mecanumDriver.swp1.setPower(bounded(-sweep_speed, -1.0, 1.0));
         } else {
             mecanumDriver.swp0.setPower(0.0);
             mecanumDriver.swp1.setPower(0.0);
         }
         telemetry.addData("Sweep speed:", mecanumDriver.swp0.getPower() - mecanumDriver.swp1.getPower());
+        // ramp thingy
+        if (gamepad2.a) {
+            mecanumDriver.ramp.setPosition(0.0);
+        } else if (gamepad2.b) {
+            mecanumDriver.ramp.setPosition(1.0);
+        }
+        telemetry.addData("Ramp", mecanumDriver.ramp.getPosition() >= 0.5 ? "High" : "Low");
+
+        // hanging
+        if (!gamepad1.x && !gamepad1.y) {
+            hangBtnDown = false;
+        }
+        if (gamepad1.y && !hangBtnDown) {
+            if (hangTarget < 0) {
+                hangTarget = 0;
+            } else {
+                hangTarget = -2;
+            }
+            hangBtnDown = true;
+        }
+        else if (gamepad1.x && !hangBtnDown) {
+            if (hangTarget > 0) {
+                hangTarget = 0;
+            } else {
+                hangTarget = 2;
+            }
+            hangBtnDown = true;
+        }
+
+        if (hangTarget == 2) {
+            mecanumDriver.hanger0.setPower(1.0);
+            mecanumDriver.hanger1.setPower(1.0);
+        }
+        else if (hangTarget == -2) {
+            mecanumDriver.hanger0.setPower(-0.5);
+            mecanumDriver.hanger1.setPower(-0.5);
+        }
+        else {
+            mecanumDriver.hanger0.setPower(0.0);
+            mecanumDriver.hanger1.setPower(0.0);
+        }
+        telemetry.addData("Hanger:", hangTarget == 0 ? "Hold Pos" : (hangTarget > 0 ? "Lifting" : "Lowering"));
+
+        // paper plane
+        if (!gamepad2.y) {
+            paperBtnDown = false;
+        } else if (gamepad2.y && !paperBtnDown) {
+            paperState += 1;
+            paperBtnDown = true;
+        }
+        if (gamepad2.x) {
+            paperState = 0;
+        }
+
+        if (paperState > 1) {
+            mecanumDriver.paperLcr.setPosition(0.0);
+        } else {
+            mecanumDriver.paperLcr.setPosition(1.0);
+        }
+        telemetry.addData("Paper Launcher:", paperState == 0 ? "..." : (paperState == 1 ? "!! ARMED !!" : "Launched"));
 
         // conveyor movement
         mecanumDriver.conv.setPower(gamepad2.right_stick_x);
@@ -189,11 +259,12 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive() && !isStopRequested()) {
-            if (gamepad1.dpad_up) {
+            if (!gamepad1.dpad_up) {
+                driveModeBtnDown = false;
+            }
+            if (gamepad1.dpad_up && !driveModeBtnDown) {
                 roboCenter = !roboCenter;
-                while (gamepad1.dpad_up) {
-                    idle();
-                }
+                driveModeBtnDown = true;
             }
             if (gamepad1.dpad_down) {
                 // reset the heading
@@ -214,7 +285,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             //  \ /
             //  / \
             // /   \
-            String circle = "\n/---\\\n|   |\n\\---/";
+            String circle = "\n/---\\\n|     |\n\\---/";
             // /---\
             // |   |
             // \---/

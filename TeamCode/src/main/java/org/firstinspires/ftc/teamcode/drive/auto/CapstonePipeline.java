@@ -133,12 +133,13 @@ public class CapstonePipeline extends OpenCvPipeline {
 
             // create a luminosity mask and clip values that are relatively dark
             Mat luminosity = extractChannel(input, 0);
-            CvType.
             Core.add(luminosity, extractChannel(input, 2), luminosity);
 
             Core.multiply(luminosity, Mat.ones(luminosity.size(), CvType.CV_8U), luminosity, 0.5);
 
-            luminosity = Core
+            Mat tmp = new Mat(luminosity.size(), CvType.CV_8U);
+            Core.add(tmp, luminosity, tmp);
+            luminosity = tmp;
 
             Imgproc.adaptiveThreshold(luminosity, luminosity, 1, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 40);
 

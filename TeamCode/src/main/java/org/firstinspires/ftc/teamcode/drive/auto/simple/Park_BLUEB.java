@@ -23,10 +23,12 @@ public class Park_BLUEB extends LinearOpMode {
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
         drive.setPoseEstimate(startPose);
 
-        TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(50.00, 36.00, Math.toRadians(360.00)))
-                .lineTo(new Vector2d(12.00, 36.00))
-                .lineTo(new Vector2d(12.00, 63.00))
+        TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(15.00, 63.00, Math.toRadians(-90.00)))
+                .splineTo(new Vector2d(15.00, 32.00), Math.toRadians(-90.00))
+                .lineTo(new Vector2d(50.00, 32.00))
                 .build();
+
+        drive.setPoseEstimate(Park_Blue.start());
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();

@@ -24,11 +24,12 @@ public class Park_REDF extends LinearOpMode {
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
         drive.setPoseEstimate(startPose);
 
-        TrajectorySequence Park_Red = drive.trajectorySequenceBuilder(new Pose2d(-39.00, -63.00, Math.toRadians(450.00)))
-                .splineTo(new Vector2d(-39.00, -40.00), Math.toRadians(90.00))
-                .splineTo(new Vector2d(-31.00, -36.00), Math.toRadians(360.00))
-                .splineTo(new Vector2d(50.00, -36.00), Math.toRadians(360.00))
+        TrajectorySequence Park_Red = drive.trajectorySequenceBuilder(new Pose2d(-39.00, -63.00, Math.toRadians(90.00)))
+                .splineTo(new Vector2d(-39.00, -36.00), Math.toRadians(0.00))
+                .splineTo(new Vector2d(50.00, -36.00), Math.toRadians(0.00))
                 .build();
+
+        drive.setPoseEstimate(Park_Red.start());
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();

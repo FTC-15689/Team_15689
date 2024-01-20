@@ -23,9 +23,9 @@ public class Park_REDB extends LinearOpMode {
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
         drive.setPoseEstimate(startPose);
 
-        TrajectorySequence Park_Red = drive.trajectorySequenceBuilder(new Pose2d(12.00, -63.00, Math.toRadians(90.00)))
-                .lineTo(new Vector2d(12.00, -36.00))
-                .lineTo(new Vector2d(50.00, -36.00))
+        TrajectorySequence Park_Red = drive.trajectorySequenceBuilder(new Pose2d(15.00, -63.00, Math.toRadians(450.00)))
+                .lineTo(new Vector2d(15.00, -32.00))
+                .lineTo(new Vector2d(50.00, -32.00))
                 .build();
 
         drive.setPoseEstimate(Park_Red.start());

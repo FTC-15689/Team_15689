@@ -34,9 +34,11 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 
@@ -84,6 +86,10 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     public final CRServo swp0;
     public final CRServo swp1;
     public final CRServo conv;
+    public final Servo ramp;
+    public final DcMotorEx hanger0;
+    public final DcMotorEx hanger1;
+    public final Servo paperLcr;
     public DcMotorEx convAng;
 
     public MecanumDrive(HardwareMap hardwareMap) {
@@ -112,10 +118,21 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         rightRear = hardwareMap.get(DcMotorEx.class, "rightBack");
         rightFront = hardwareMap.get(DcMotorEx.class, "rightFront");
 
+        // action things
+
         convAng = hardwareMap.get(DcMotorEx.class, "convAng");
         swp0 = hardwareMap.get(CRServo.class, "swp0");
         swp1 = hardwareMap.get(CRServo.class, "swp1");
         conv = hardwareMap.get(CRServo.class, "convBlt");
+        ramp = hardwareMap.get(Servo.class, "ramp");
+        hanger0 = hardwareMap.get(DcMotorEx.class, "hang0");
+        hanger1 = hardwareMap.get(DcMotorEx.class, "hang1");
+        paperLcr = hardwareMap.get(Servo.class, "paperAir");
+
+        hanger0.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        hanger1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        hanger1.setDirection(DcMotorSimple.Direction.REVERSE);
 
         drive_motors = Arrays.asList(leftFront, leftRear, rightRear, rightFront);
 
