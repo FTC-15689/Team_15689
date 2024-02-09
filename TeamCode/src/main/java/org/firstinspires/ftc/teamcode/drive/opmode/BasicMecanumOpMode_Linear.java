@@ -153,22 +153,30 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         );
 
         // servos
-        // sweeper
-        if (sweep_speed != 0.0) {
-            mecanumDriver.swp0.setPower(bounded(sweep_speed, -1.0, 1.0));
-            mecanumDriver.swp1.setPower(bounded(-sweep_speed, -1.0, 1.0));
-        } else {
-            mecanumDriver.swp0.setPower(0.0);
-            mecanumDriver.swp1.setPower(0.0);
-        }
-        telemetry.addData("Sweep speed:", mecanumDriver.swp0.getPower() - mecanumDriver.swp1.getPower());
         // ramp thingy
-        if (gamepad2.a) {
+        if (gamepad2.a) { // low
             mecanumDriver.ramp.setPosition(0.0);
-        } else if (gamepad2.b) {
+        } else if (gamepad2.b) { // high
             mecanumDriver.ramp.setPosition(1.0);
         }
         telemetry.addData("Ramp", mecanumDriver.ramp.getPosition() >= 0.5 ? "High" : "Low");
+        // sweeper
+        if (sweep_speed != 0.0) {
+            mecanumDriver.swp2.setPower(bounded(sweep_speed, -0.75, 0.75));
+            if (mecanumDriver.ramp.getPosition() <= 0.5) {
+                mecanumDriver.swp0.setPower(bounded(sweep_speed, -1.0, 1.0));
+                mecanumDriver.swp1.setPower(bounded(-sweep_speed, -1.0, 1.0));
+            }
+            else {
+                mecanumDriver.swp0.setPower(0.0);
+                mecanumDriver.swp1.setPower(0.0);
+            }
+        } else {
+            mecanumDriver.swp0.setPower(0.0);
+            mecanumDriver.swp1.setPower(0.0);
+            mecanumDriver.swp2.setPower(0.0);
+        }
+        telemetry.addData("Sweep speed:", mecanumDriver.swp0.getPower() - mecanumDriver.swp1.getPower());
 
         // hanging
         if (!gamepad1.x && !gamepad1.y) {

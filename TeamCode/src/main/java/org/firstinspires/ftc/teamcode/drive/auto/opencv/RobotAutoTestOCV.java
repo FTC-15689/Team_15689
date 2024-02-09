@@ -37,6 +37,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 import org.firstinspires.ftc.teamcode.drive.auto.CapstoneDetectionCamera;
 import org.firstinspires.ftc.teamcode.drive.auto.CapstonePipeline;
+import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 
 /**
  * This file illustrates the concept of driving a path based on encoder counts.
@@ -88,11 +89,15 @@ public class RobotAutoTestOCV extends LinearOpMode {
             telemetry.update();
         }
         // Wait for the game to start (driver presses PLAY)
+        TrajectorySequence init = mecanumDriver.trajectorySequenceBuilder(new Pose2d(63.00, -35.00, Math.toRadians(180.00)))
+                .splineTo(new Vector2d(54.00, -35.00), Math.toRadians(180.00))
+                .build();
         waitForStart();
 
         try {
             // move an initial distance to the capstone
-            mecanumDriver.followTrajectorySequence(mecanumDriver.genPath(2));
+            mecanumDriver.setPoseEstimate(init.start());
+            mecanumDriver.followTrajectorySequence(init);
 
             // wait for the robot to fully stop
             sleep(1000);
@@ -126,6 +131,9 @@ public class RobotAutoTestOCV extends LinearOpMode {
                                     .build()
                     );
             }
+
+            mecanumDriver.swp0.setPower(0.5);
+            mecanumDriver.swp1.setPower(0.5);
         } catch (Exception e) {
             String err = e.toString();
 

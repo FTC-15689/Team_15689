@@ -24,9 +24,11 @@ public class Park_BLUEF extends LinearOpMode {
         Pose2d startPose = new Pose2d(0, 0, Math.toRadians(180));
         drive.setPoseEstimate(startPose);
 
-        TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(-39.00, 63.00, Math.toRadians(270.00)))
-                .splineTo(new Vector2d(-39.00, 36.00), Math.toRadians(360.00))
-                .splineTo(new Vector2d(50.00, 36.00), Math.toRadians(360.00))
+        TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(-39.00, 63.00, Math.toRadians(-90.00)))
+                .splineTo(new Vector2d(-39.00, 20.00), Math.toRadians(-90.00))
+                .splineTo(new Vector2d(-20.00, 12.00), Math.toRadians(0.00))
+                .lineTo(new Vector2d(14.00, 12.00))
+                .lineTo(new Vector2d(49.88, 17.36))
                 .build();
 
         drive.setPoseEstimate(Park_Blue.start());

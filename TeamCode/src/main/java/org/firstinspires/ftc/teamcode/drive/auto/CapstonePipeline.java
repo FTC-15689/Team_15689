@@ -3,14 +3,15 @@ package org.firstinspires.ftc.teamcode.drive.auto;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 
 public class CapstonePipeline extends OpenCvPipeline {
 
@@ -64,26 +65,6 @@ public class CapstonePipeline extends OpenCvPipeline {
         rightRegionCb = firstFrame.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
     }
 
-    public double maxDiff(List<Double> regions) {
-        double total_avg = 0;
-        for (Double sect : regions) {
-            total_avg += sect;
-        }
-
-        total_avg /= regions.size();
-
-        double maxDiff = 0;
-        for (Double region : regions) {
-            double diff = Math.abs(total_avg - region);
-
-            if (diff > maxDiff) {
-                maxDiff = diff;
-            }
-        }
-
-        return maxDiff;
-    }
-
     public double calcMeans(Mat input) {
         leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
         centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
@@ -98,6 +79,85 @@ public class CapstonePipeline extends OpenCvPipeline {
         rightAvg = rightMean.val[0];
 
         return Math.max(leftAvg, Math.max(centerAvg, rightAvg));
+    }
+
+    double getMedian(Mat hist) {
+        // binapprox algorithm
+
+        long n = hist.total();
+        int[] histBuff = new int[(int) n];
+        hist.get(0, 0, histBuff);
+        // Compute the mean and standard deviation
+        // int n = x.length;
+        double sum = 0;
+        // int i;
+        for (int i = 0; i < n; i++) {
+            sum += histBuff[i];
+        }
+        double mu = sum / n;
+
+        sum = 0;
+        for (int i = 0; i < n; i++) {
+            sum += (histBuff[i] - mu) * (histBuff[i] - mu);
+        }
+        double sigma = Math.sqrt(sum / n);
+
+        // Bin x across the interval [mu-sigma, mu+sigma]
+        int bottomcount = 0;
+        int[] bincounts = new int[1001];
+        for (int i = 0; i < 1001; i++) {
+            bincounts[i] = 0;
+        }
+        double scalefactor = 1000 / (2 * sigma);
+        double leftend = mu - sigma;
+        double rightend = mu + sigma;
+        int bin;
+
+        for (int i = 0; i < n; i++) {
+            if (histBuff[i] < leftend) {
+                bottomcount++;
+            } else if (histBuff[i] < rightend) {
+                bin = (int) ((histBuff[i] - leftend) * scalefactor);
+                bincounts[bin]++;
+            }
+        }
+
+        double median = 0;
+        // If n is odd
+        if ((n % 2) != 0) {
+            // Find the bin that contains the median
+            int k = (int) ((n + 1) / 2);
+            int count = bottomcount;
+
+            for (int i = 0; i < 1001; i++) {
+                count += bincounts[i];
+
+                if (count >= k) {
+                    median = (i + 0.5) / scalefactor + leftend;
+                }
+            }
+        }
+
+        // If n is even
+        else {
+            // Find the bins that contains the medians
+            int k = (int) (n / 2);
+            int count = bottomcount;
+
+            for (int i = 0; i < 1001; i++) {
+                count += bincounts[i];
+
+                if (count >= k) {
+                    int j = i;
+                    while (count == k) {
+                        j++;
+                        count += bincounts[j];
+                    }
+                    median = (i + j + 1) / (2 * scalefactor) + leftend;
+                }
+            }
+        }
+        return median;
     }
 
     private Mat extractChannel(Mat src, int index) {
@@ -125,46 +185,63 @@ public class CapstonePipeline extends OpenCvPipeline {
         }
         if (cmode != ColorMode.ANY) {
             Core.extractChannel(input, input, color_index);
-        }
 
-        if (cmode == ColorMode.ANY) {
-            // convert the bgr
-            Imgproc.cvtColor(input, input, Imgproc.COLOR_BGRA2BGR);
+            // remove the alpha channel
+            Imgproc.cvtColor(input, input, Imgproc.COLOR_BGRA2RGB);
 
-            // create a luminosity mask and clip values that are relatively dark
-            Mat luminosity = extractChannel(input, 0);
-            Core.add(luminosity, extractChannel(input, 2), luminosity);
+            // first convert the red and blue channels to 1d arrays of pixels
+            Mat redPixels = extractChannel(input, 0);
+            Mat bluePixels = extractChannel(input, 2);
 
-            Core.multiply(luminosity, Mat.ones(luminosity.size(), CvType.CV_8U), luminosity, 0.5);
+            redPixels.reshape(1, 1).convertTo(redPixels, CvType.CV_64F);
+            bluePixels.reshape(1, 1).convertTo(bluePixels, CvType.CV_64F);
 
-            Mat tmp = new Mat(luminosity.size(), CvType.CV_8U);
-            Core.add(tmp, luminosity, tmp);
-            luminosity = tmp;
+            // sort the arrays
+            Core.sort(redPixels, redPixels, Core.SORT_EVERY_ROW + Core.SORT_ASCENDING);
+            Core.sort(bluePixels, bluePixels, Core.SORT_EVERY_ROW + Core.SORT_ASCENDING);
 
-            Imgproc.adaptiveThreshold(luminosity, luminosity, 1, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 40);
+            // only use the top 25% of the pixels
+            int redPixelsToUse = (int) (redPixels.cols() * 0.25);
+            int bluePixelsToUse = (int) (bluePixels.cols() * 0.25);
 
-            Core.merge(Arrays.asList(luminosity, luminosity, luminosity), luminosity);
-            // multiply our luminosity mask against the image
-            Core.multiply(input, luminosity, input);
+            redPixels = redPixels.colRange(redPixels.cols() - redPixelsToUse, redPixels.cols());
+            bluePixels = bluePixels.colRange(bluePixels.cols() - bluePixelsToUse, bluePixels.cols());
 
-            // create a list of the channels and an empty list to store the differences of each channel
-            double redMean = calcMeans(extractChannel(input, 0));
-            double blueMean = calcMeans(extractChannel(input, 2));
+            // create a histogram of the red and blue pixels
+            Mat redHist = new Mat();
+            Mat blueHist = new Mat();
 
-            double maxMean = Math.max(redMean, blueMean);
+            Imgproc.calcHist(Collections.singletonList(redPixels), new MatOfInt(0), new Mat(), redHist, new MatOfInt(256), new MatOfFloat(0, 256));
+            Imgproc.calcHist(Collections.singletonList(bluePixels), new MatOfInt(0), new Mat(), blueHist, new MatOfInt(256), new MatOfFloat(0, 256));
+
+            // clear the red and blue pixels mats
+            redPixels.release();
+            bluePixels.release();
+            redHist.release();
+            blueHist.release();
+
+            double redMedian = getMedian(redHist);
+            double blueMedian = getMedian(blueHist);
+
+            double maxMean = Math.max(redMedian, blueMedian);
 
             Mat targetChannel;
 
-            if (maxMean == redMean) {
+            if (maxMean == redMedian) {
                 targetChannel = extractChannel(input, 0);
                 bestChannel = ColorMode.RED;
-            } else if (maxMean == blueMean) {
+            } else if (maxMean == blueMedian) {
                 targetChannel = extractChannel(input, 2);
                 bestChannel = ColorMode.BLUE;
             } else {
                 targetChannel = extractChannel(input, 2);
                 bestChannel = ColorMode.ANY;
             }
+            // clear the input mat
+            input.release();
+
+            // clip the input pixels to values between 216 and 255
+            Core.inRange(targetChannel, new Scalar(216), new Scalar(255), targetChannel);
 
             leftRegionCb = targetChannel.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
             centerRegionCb = targetChannel.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
@@ -187,8 +264,9 @@ public class CapstonePipeline extends OpenCvPipeline {
             } else {
                 position = CapstonePosition.RIGHT;
             }
-        }
-        else {
+
+            input = targetChannel;
+        } else {
             leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
             centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
             rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
@@ -211,12 +289,20 @@ public class CapstonePipeline extends OpenCvPipeline {
         }
 
         // draw visual bounds on the image
-        Imgproc.rectangle( // LEFT
-                input, LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.LEFT ? WHITE : BLUE, 5);
-        Imgproc.rectangle( // CENTER
-                input, CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.CENTER ? WHITE : BLUE, 5);
-        Imgproc.rectangle( // RIGHT
-                input, RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT, position == CapstonePosition.RIGHT ? WHITE : BLUE, 5);
+        switch (position) {
+            case LEFT:
+                Imgproc.rectangle( // LEFT
+                        input, LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT, WHITE, 15);
+                break;
+            case CENTER:
+                Imgproc.rectangle( // CENTER
+                        input, CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT, WHITE, 15);
+                break;
+            case RIGHT:
+                Imgproc.rectangle( // RIGHT
+                        input, RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT, WHITE, 15);
+                break;
+        }
 
         return input;
     }

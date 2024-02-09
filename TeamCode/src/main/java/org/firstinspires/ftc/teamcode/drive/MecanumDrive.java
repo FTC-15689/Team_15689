@@ -90,6 +90,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
     public final DcMotorEx hanger0;
     public final DcMotorEx hanger1;
     public final Servo paperLcr;
+    public final DcMotorEx swp2;
     public DcMotorEx convAng;
 
     public MecanumDrive(HardwareMap hardwareMap) {
@@ -123,6 +124,7 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         convAng = hardwareMap.get(DcMotorEx.class, "convAng");
         swp0 = hardwareMap.get(CRServo.class, "swp0");
         swp1 = hardwareMap.get(CRServo.class, "swp1");
+        swp2 = hardwareMap.get(DcMotorEx.class, "swp2");
         conv = hardwareMap.get(CRServo.class, "convBlt");
         ramp = hardwareMap.get(Servo.class, "ramp");
         hanger0 = hardwareMap.get(DcMotorEx.class, "hang0");
@@ -133,6 +135,9 @@ public class MecanumDrive extends com.acmerobotics.roadrunner.drive.MecanumDrive
         hanger1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         hanger1.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        ramp.setPosition(1.0); // high ramp pos
+        paperLcr.setPosition(1.0); // cocked paper airplane launcher
 
         drive_motors = Arrays.asList(leftFront, leftRear, rightRear, rightFront);
 
