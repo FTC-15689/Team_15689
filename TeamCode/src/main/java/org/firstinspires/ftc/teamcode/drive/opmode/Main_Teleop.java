@@ -9,39 +9,19 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
+import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
-/**
- * This file contains an example of a Linear "OpMode".
- * An OpMode is a 'program' that runs in either the autonomous or the teleop period of an FTC match.
- * The names of OpModes appear on the menu of the FTC Driver Station.
- * When a selection is made from the menu, the corresponding OpMode is executed.
- * <p>
- * This particular OpMode illustrates driving a 4-motor Omni-Directional (or Holonomic) robot.
- * This code will work with either a Mecanum-Drive or an X-Drive train.
- * Both of these drives are illustrated at <a href="https://gm0.org/en/latest/docs/robot-design/drivetrains/holonomic.html">...</a>
- * Note that a Mecanum drive must display an X roller-pattern when viewed from above.
- * <p>
- * Also note that it is critical to set the correct rotation direction for each motor.  See details below.
- * <p>
- * Holonomic drives provide the ability for the robot to move in three axes (directions) simultaneously.
- * Each motion axis is controlled by one Joystick axis.
- * <p>
- * 1) Axial:    Driving forward and backward               Left-joystick Forward/Backward
- * 2) Lateral:  Strafing right and left                     Left-joystick Right and Left
- * 3) Yaw:      Rotating Clockwise and counter clockwise    Right-joystick Right and Left
- * <p>
- * This code is written assuming that the right-side motors need to be reversed for the robot to drive forward.
- * When you first test your robot, if it moves backward when you push the left stick forward, then you must flip
- * the direction of all 4 motors (see code below).
- * <p>
- * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
- */
+import java.util.List;
 
-@TeleOp(name = "!Basic: Mecanum Linear OpMode", group = "Linear Opmode")
-public class BasicMecanumOpMode_Linear extends LinearOpMode {
+@TeleOp(name = "!0: Teleop-Main", group = "Linear Opmode")
+public class Main_Teleop extends LinearOpMode {
 
+    private static final boolean USE_WEBCAM = true;
     // Declare OpMode members for each of the 4 motors.
     private final ElapsedTime runtime = new ElapsedTime();
     private MecanumDrive mecanumDriver;
@@ -50,6 +30,8 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
     private boolean driveModeBtnDown = false;
     private int paperState = 0;
     private boolean paperBtnDown = false;
+    private AprilTagProcessor aprilTag;
+    private VisionPortal visionPortal;
 
     public double bounded(double num, double low, double high) {
         return Math.min(high, Math.max(low, num));
@@ -166,8 +148,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             if (mecanumDriver.ramp.getPosition() <= 0.5) {
                 mecanumDriver.swp0.setPower(bounded(sweep_speed, -1.0, 1.0));
                 mecanumDriver.swp1.setPower(bounded(-sweep_speed, -1.0, 1.0));
-            }
-            else {
+            } else {
                 mecanumDriver.swp0.setPower(0.0);
                 mecanumDriver.swp1.setPower(0.0);
             }
@@ -189,8 +170,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
                 hangTarget = -2;
             }
             hangBtnDown = true;
-        }
-        else if (gamepad1.x && !hangBtnDown) {
+        } else if (gamepad1.x && !hangBtnDown) {
             if (hangTarget > 0) {
                 hangTarget = 0;
             } else {
@@ -202,12 +182,10 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         if (hangTarget == 2) {
             mecanumDriver.hanger0.setPower(1.0);
             mecanumDriver.hanger1.setPower(1.0);
-        }
-        else if (hangTarget == -2) {
+        } else if (hangTarget == -2) {
             mecanumDriver.hanger0.setPower(-0.5);
             mecanumDriver.hanger1.setPower(-0.5);
-        }
-        else {
+        } else {
             mecanumDriver.hanger0.setPower(0.0);
             mecanumDriver.hanger1.setPower(0.0);
         }
@@ -252,6 +230,10 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
         // See AutoTransferPose.java for further details
         mecanumDriver.setPoseEstimate(MecanumDrive.currentPos);
 
+        if (hardwareMap.tryGet(WebcamName.class, "Webcam 1") != null) {
+            initAprilTag();
+        }
+
         // Wait for the game to start (driver presses PLAY)
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -287,6 +269,7 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
             }
 
             actions();
+            telemetryAprilTag();
 
             String cross = "\n \\   /\n  \\ /\n  / \\\n /   \\";
             // \   /
@@ -305,5 +288,54 @@ public class BasicMecanumOpMode_Linear extends LinearOpMode {
 
         // immediately stop all motors
         mecanumDriver.brakeALL();
+        visionPortal.close();
     }
+
+    /**
+     * Initialize the AprilTag processor.
+     */
+    private void initAprilTag() {
+
+        // Create the AprilTag processor the easy way.
+        aprilTag = AprilTagProcessor.easyCreateWithDefaults();
+
+        // Create the vision portal the easy way.
+        if (USE_WEBCAM) {
+            visionPortal = VisionPortal.easyCreateWithDefaults(
+                    hardwareMap.get(WebcamName.class, "Webcam 1"), aprilTag);
+        } else {
+            visionPortal = VisionPortal.easyCreateWithDefaults(
+                    BuiltinCameraDirection.BACK, aprilTag);
+        }
+
+    }   // end method initAprilTag()
+
+    /**
+     * Add telemetry about AprilTag detections.
+     */
+    @SuppressLint("DefaultLocale")
+    private void telemetryAprilTag() {
+
+        List<AprilTagDetection> currentDetections = aprilTag.getDetections();
+        telemetry.addData("# AprilTags Detected", currentDetections.size());
+
+        // Step through the list of detections and display info for each one.
+        for (AprilTagDetection detection : currentDetections) {
+            if (detection.metadata != null) {
+                telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
+                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
+                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
+                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
+            } else {
+                telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
+                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
+            }
+        }   // end for() loop
+
+        // Add "key" information to telemetry
+        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
+        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
+        telemetry.addLine("RBE = Range, Bearing & Elevation");
+
+    }   // end method telemetryAprilTag()
 }

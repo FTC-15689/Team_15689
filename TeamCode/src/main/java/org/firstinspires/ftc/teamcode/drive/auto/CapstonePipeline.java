@@ -3,8 +3,8 @@ package org.firstinspires.ftc.teamcode.drive.auto;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfFloat;
-import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -12,6 +12,7 @@ import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
 import java.util.Collections;
+import java.util.List;
 
 public class CapstonePipeline extends OpenCvPipeline {
 
@@ -82,82 +83,13 @@ public class CapstonePipeline extends OpenCvPipeline {
     }
 
     double getMedian(Mat hist) {
-        // binapprox algorithm
+        int median = hist.rows() / 2;
 
-        long n = hist.total();
-        int[] histBuff = new int[(int) n];
-        hist.get(0, 0, histBuff);
-        // Compute the mean and standard deviation
-        // int n = x.length;
-        double sum = 0;
-        // int i;
-        for (int i = 0; i < n; i++) {
-            sum += histBuff[i];
+        if (hist.rows() % 2 == 1) {
+            return hist.get(median, 0)[0];
+        } else {
+            return (hist.get(median - 1, 0)[0] + hist.get(median, 0)[0]) / 2;
         }
-        double mu = sum / n;
-
-        sum = 0;
-        for (int i = 0; i < n; i++) {
-            sum += (histBuff[i] - mu) * (histBuff[i] - mu);
-        }
-        double sigma = Math.sqrt(sum / n);
-
-        // Bin x across the interval [mu-sigma, mu+sigma]
-        int bottomcount = 0;
-        int[] bincounts = new int[1001];
-        for (int i = 0; i < 1001; i++) {
-            bincounts[i] = 0;
-        }
-        double scalefactor = 1000 / (2 * sigma);
-        double leftend = mu - sigma;
-        double rightend = mu + sigma;
-        int bin;
-
-        for (int i = 0; i < n; i++) {
-            if (histBuff[i] < leftend) {
-                bottomcount++;
-            } else if (histBuff[i] < rightend) {
-                bin = (int) ((histBuff[i] - leftend) * scalefactor);
-                bincounts[bin]++;
-            }
-        }
-
-        double median = 0;
-        // If n is odd
-        if ((n % 2) != 0) {
-            // Find the bin that contains the median
-            int k = (int) ((n + 1) / 2);
-            int count = bottomcount;
-
-            for (int i = 0; i < 1001; i++) {
-                count += bincounts[i];
-
-                if (count >= k) {
-                    median = (i + 0.5) / scalefactor + leftend;
-                }
-            }
-        }
-
-        // If n is even
-        else {
-            // Find the bins that contains the medians
-            int k = (int) (n / 2);
-            int count = bottomcount;
-
-            for (int i = 0; i < 1001; i++) {
-                count += bincounts[i];
-
-                if (count >= k) {
-                    int j = i;
-                    while (count == k) {
-                        j++;
-                        count += bincounts[j];
-                    }
-                    median = (i + j + 1) / (2 * scalefactor) + leftend;
-                }
-            }
-        }
-        return median;
     }
 
     private Mat extractChannel(Mat src, int index) {
@@ -169,140 +101,132 @@ public class CapstonePipeline extends OpenCvPipeline {
 
     @Override
     public Mat processFrame(Mat input) {
-        int color_index;
-        switch (cmode) {
-            case RED:
-                color_index = 0;
-                break;
-            case GREEN:
-                color_index = 1;
-                break;
-            case BLUE:
-                color_index = 2;
-                break;
-            default:
-                color_index = -1;
-        }
-        if (cmode != ColorMode.ANY) {
-            Core.extractChannel(input, input, color_index);
+        // extract the red and blue channels
+        Mat redChannel = extractChannel(input, 0);
+        Mat blueChannel = extractChannel(input, 2);
 
-            // remove the alpha channel
-            Imgproc.cvtColor(input, input, Imgproc.COLOR_BGRA2RGB);
+        // find which channel has the higher std dev
+        MatOfDouble redMean = new MatOfDouble();
+        MatOfDouble redStd = new MatOfDouble();
+        Core.meanStdDev(redChannel, redMean, redStd);
 
-            // first convert the red and blue channels to 1d arrays of pixels
-            Mat redPixels = extractChannel(input, 0);
-            Mat bluePixels = extractChannel(input, 2);
+        MatOfDouble blueMean = new MatOfDouble();
+        MatOfDouble blueStd = new MatOfDouble();
+        Core.meanStdDev(blueChannel, blueMean, blueStd);
 
-            redPixels.reshape(1, 1).convertTo(redPixels, CvType.CV_64F);
-            bluePixels.reshape(1, 1).convertTo(bluePixels, CvType.CV_64F);
+        double redVal = redStd.get(0, 0)[0];
+        double blueVal = blueStd.get(0, 0)[0];
 
-            // sort the arrays
-            Core.sort(redPixels, redPixels, Core.SORT_EVERY_ROW + Core.SORT_ASCENDING);
-            Core.sort(bluePixels, bluePixels, Core.SORT_EVERY_ROW + Core.SORT_ASCENDING);
+        Mat targetChannel;
+        Mat avg_others;
 
-            // only use the top 25% of the pixels
-            int redPixelsToUse = (int) (redPixels.cols() * 0.25);
-            int bluePixelsToUse = (int) (bluePixels.cols() * 0.25);
+        if (redVal > blueVal) {
+            bestChannel = ColorMode.RED;
+            blueChannel.release();
+            targetChannel = redChannel.clone();
+            redChannel.release();
 
-            redPixels = redPixels.colRange(redPixels.cols() - redPixelsToUse, redPixels.cols());
-            bluePixels = bluePixels.colRange(bluePixels.cols() - bluePixelsToUse, bluePixels.cols());
-
-            // create a histogram of the red and blue pixels
-            Mat redHist = new Mat();
-            Mat blueHist = new Mat();
-
-            Imgproc.calcHist(Collections.singletonList(redPixels), new MatOfInt(0), new Mat(), redHist, new MatOfInt(256), new MatOfFloat(0, 256));
-            Imgproc.calcHist(Collections.singletonList(bluePixels), new MatOfInt(0), new Mat(), blueHist, new MatOfInt(256), new MatOfFloat(0, 256));
-
-            // clear the red and blue pixels mats
-            redPixels.release();
-            bluePixels.release();
-            redHist.release();
-            blueHist.release();
-
-            double redMedian = getMedian(redHist);
-            double blueMedian = getMedian(blueHist);
-
-            double maxMean = Math.max(redMedian, blueMedian);
-
-            Mat targetChannel;
-
-            if (maxMean == redMedian) {
-                targetChannel = extractChannel(input, 0);
-                bestChannel = ColorMode.RED;
-            } else if (maxMean == blueMedian) {
-                targetChannel = extractChannel(input, 2);
-                bestChannel = ColorMode.BLUE;
-            } else {
-                targetChannel = extractChannel(input, 2);
-                bestChannel = ColorMode.ANY;
-            }
-            // clear the input mat
-            input.release();
-
-            // clip the input pixels to values between 216 and 255
-            Core.inRange(targetChannel, new Scalar(216), new Scalar(255), targetChannel);
-
-            leftRegionCb = targetChannel.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
-            centerRegionCb = targetChannel.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
-            rightRegionCb = targetChannel.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
-
-            Scalar leftMean = Core.mean(leftRegionCb);
-            Scalar centerMean = Core.mean(centerRegionCb);
-            Scalar rightMean = Core.mean(rightRegionCb);
-
-            leftAvg = leftMean.val[0];
-            centerAvg = centerMean.val[0];
-            rightAvg = rightMean.val[0];
-
-            maxMean = Math.max(leftAvg, Math.max(centerAvg, rightAvg));
-
-            if (maxMean == leftAvg) {
-                position = CapstonePosition.LEFT;
-            } else if (maxMean == centerAvg) {
-                position = CapstonePosition.CENTER;
-            } else {
-                position = CapstonePosition.RIGHT;
-            }
-
-            input = targetChannel;
+            avg_others = new Mat();
+            Core.extractChannel(input, avg_others, 1);
+            Core.add(avg_others, extractChannel(input, 2), avg_others);
+            Core.divide(avg_others, new Scalar(2), avg_others);
         } else {
-            leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
-            centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
-            rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
+            bestChannel = ColorMode.BLUE;
+            redChannel.release();
+            targetChannel = blueChannel.clone();
+            blueChannel.release();
 
-            Scalar leftMean = Core.mean(leftRegionCb);
-            Scalar centerMean = Core.mean(centerRegionCb);
-            Scalar rightMean = Core.mean(rightRegionCb);
+            avg_others = new Mat();
+            Core.extractChannel(input, avg_others, 0);
+            Core.add(avg_others, extractChannel(input, 1), avg_others);
+            Core.divide(avg_others, new Scalar(2), avg_others);
+        }
 
-            leftAvg = leftMean.val[0];
-            centerAvg = centerMean.val[0];
-            rightAvg = rightMean.val[0];
+        // subtract the average of the other two channels from the target channel thus removing the background
+        Core.subtract(targetChannel, avg_others, targetChannel);
+        avg_others.release();
+        Core.inRange(targetChannel, new Scalar(0), new Scalar(255), targetChannel);
 
+        // pass a threshold of 100 to the target channel
+        Imgproc.threshold(targetChannel, targetChannel, 50, 255, Imgproc.THRESH_BINARY);
+
+        // find the edges in the target channel
+        Mat edges = new Mat();
+        Imgproc.Canny(targetChannel, edges, 100, 200);
+
+        // dilate the edges
+        Imgproc.dilate(edges, edges, new Mat(), new Point(-1, -1), 1);
+
+        // find the contours in the edges
+        Mat hierarchy = new Mat();
+        List<MatOfPoint> contours = new java.util.ArrayList<>();
+        Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+
+        // sort the contours by area
+        contours.sort((o1, o2) -> {
+            double area1 = Imgproc.contourArea(o1);
+            double area2 = Imgproc.contourArea(o2);
+            return Double.compare(area2, area1);
+        });
+
+        // only use the first five if there are more than five
+        if (contours.size() > 5) {
+            contours = contours.subList(0, 5);
+        }
+
+        // draw the contours on the input
+        input.convertTo(input, CvType.CV_8U);
+        Imgproc.drawContours(input, contours, -1, bestChannel == ColorMode.RED ? RED : BLUE, 15);
+
+        // Using the center of the bounding box around each contour, group them into the left, center, and right regions
+        List<List<MatOfPoint>> leftRegions = new java.util.ArrayList<>();
+        List<List<MatOfPoint>> centerRegions = new java.util.ArrayList<>();
+        List<List<MatOfPoint>> rightRegions = new java.util.ArrayList<>();
+
+        int leftX = (int) (input.width() / 3.0);
+        int rightX = (int) (input.width() * 2.0 / 3.0);
+        int centerX = (int) (input.width() / 2.0);
+
+        for (MatOfPoint contour : contours) {
+            Rect boundingBox = Imgproc.boundingRect(contour);
+            Point center = new Point(boundingBox.x + boundingBox.width / 2.0, boundingBox.y + boundingBox.height / 2.0);
+
+            if (center.x < leftX) {
+                leftRegions.add(Collections.singletonList(contour));
+            } else if (center.x > rightX) {
+                rightRegions.add(Collections.singletonList(contour));
+            } else {
+                centerRegions.add(Collections.singletonList(contour));
+            }
+        }
+
+        // find the group with the most area
+        double leftArea = leftRegions.stream().mapToDouble(region -> Imgproc.contourArea(region.get(0))).sum();
+        double centerArea = centerRegions.stream().mapToDouble(region -> Imgproc.contourArea(region.get(0))).sum();
+        double rightArea = rightRegions.stream().mapToDouble(region -> Imgproc.contourArea(region.get(0))).sum();
+
+        if (centerArea > leftArea && centerArea > rightArea) {
+            position = CapstonePosition.CENTER;
+
+            // draw the center region
+            Imgproc.rectangle(input, new Point(centerX - REGION_WIDTH / 2.0, 0), new Point(centerX + REGION_WIDTH / 2.0, input.height()), WHITE, 15);
+        }
+        else if (rightArea > leftArea && rightArea > centerArea) {
+            position = CapstonePosition.RIGHT;
+
+            // draw the right region
+            Imgproc.rectangle(input, new Point(rightX - REGION_WIDTH / 2.0, 0), new Point(rightX + REGION_WIDTH / 2.0, input.height()), WHITE, 15);
+        }
+        else {
             position = CapstonePosition.LEFT;
 
-            if (centerAvg > leftAvg && centerAvg > rightAvg) {
-                position = CapstonePosition.CENTER;
-            } else if (rightAvg > leftAvg && rightAvg > centerAvg) {
-                position = CapstonePosition.RIGHT;
-            }
+            // draw the left region
+            Imgproc.rectangle(input, new Point(leftX - REGION_WIDTH / 2.0, 0), new Point(leftX + REGION_WIDTH / 2.0, input.height()), WHITE, 15);
         }
 
-        // draw visual bounds on the image
-        switch (position) {
-            case LEFT:
-                Imgproc.rectangle( // LEFT
-                        input, LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT, WHITE, 15);
-                break;
-            case CENTER:
-                Imgproc.rectangle( // CENTER
-                        input, CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT, WHITE, 15);
-                break;
-            case RIGHT:
-                Imgproc.rectangle( // RIGHT
-                        input, RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT, WHITE, 15);
-                break;
-        }
+        // convert input to int
+        input.convertTo(input, CvType.CV_8U);
+        targetChannel.convertTo(targetChannel, CvType.CV_8U);
 
         return input;
     }

@@ -18,71 +18,28 @@ blue = np.median(np.sort(img[:, :, 2].flatten())[-int(0.25 * img[:, :, 2].size):
 
 luminosity = img[:, :, (2 * (blue > red))]
 plt.imsave("debug/1.png", luminosity, cmap="gray")
-# limit to values between 200 and 255
-pixels = ()
-for i in range(180, 255):
-    tmp = luminosity.clip(i, 255)
-    tmp = cv2.GaussianBlur(tmp, (5, 5), 0)
-    pixels += (np.sum(tmp > i),)
 
-pixels = np.array(pixels)
-
-deriv2 = np.diff(pixels, 2)
-
-# find the maximum of the second derivative
-max_index = np.argmax(deriv2)
-max_value = pixels[max_index]
-
-# find the index of the maximum value
-max_index = np.argmax(pixels > max_value)
-max_index = np.clip((max_index + 180) * 1.2, 180, 255)
-print(f'Optimal value: {max_index}')
-
-luminosity = luminosity.clip(max_index, 255)
-luminosity = (luminosity - max_index) * 255 / (255 - max_index)
-luminosity = cv2.GaussianBlur(luminosity, (15, 15), 0)
-luminosity = np.array(luminosity, dtype=np.uint8)
-plt.imsave("debug/2.png", luminosity, cmap="gray")
+# find the difference between the luminosity and the average of the green and blue channel
+# diff_lum = img[:, :, 0] - np.mean(img[:, :, 1:], axis=2)
+diff_lum = luminosity - np.mean(img[:, :, 1:], axis=2)
+diff_lum = diff_lum.clip(0, 255)
+diff_lum = cv2.threshold(diff_lum, 50, 255, cv2.THRESH_BINARY)[1]
+diff_lum = cv2.GaussianBlur(diff_lum, (5, 5), 0)
+plt.imsave("debug/2.png", diff_lum, cmap="gray")
 
 # find the edges
-grad_x, grad_y = np.gradient(luminosity)
-grad = np.sqrt(grad_x ** 2 + grad_y ** 2)
-grad = grad / grad.max() * 255
-grad = np.array(grad, dtype=np.uint8)
-plt.imsave("debug/3.png", grad, cmap="gray")
-
-edges = cv2.Canny(grad, 100, 200)
+diff_lum = diff_lum.astype(np.uint8)
+edges = cv2.Canny(diff_lum, 100, 200)
 edges = cv2.dilate(edges, np.ones((3, 3), np.uint8), iterations=1)
-plt.imsave("debug/4.png", edges, cmap="gray")
+plt.imsave("debug/3.png", edges, cmap="gray")
 
 # find the contours
 contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 contours = sorted(contours, key=cv2.contourArea, reverse=True)
+plt.imsave("debug/4.png", cv2.drawContours(img.copy(), contours, -1, (0, 255, 0), 3))
 
-# remove contours whose area is less than 0.01% of the total area
-contours = [c for c in contours if cv2.contourArea(c) > 0.0001 * img.size]
-
-tmp = img.copy()
-cv2.drawContours(tmp, contours, -1, (0, 255, 0), 3)
-plt.imsave("debug/5.png", tmp)
-
-areas = [cv2.contourArea(c) for c in contours]
-
-areas = np.array(areas) / np.sum(areas)
-
-# remove areas under 5%
-contours = [c for i, c in enumerate(contours) if areas[i] > 0.05]
-print(f'Found {len(contours)} contours')
-
-tmp = img.copy()
-cv2.drawContours(tmp, contours, -1, (0, 255, 0), 3)
-for c in contours:
-    minRect = cv2.minAreaRect(c)
-    box = cv2.boxPoints(minRect)
-    box = np.intp(box)
-    cv2.drawContours(tmp, [box], 0, (0, 0, 255), 2)
-
-plt.imsave("debug/6.png", tmp)
+# only use the 5 largest contours
+contours = contours[:5]
 
 # group the contours by the center of the bounding box
 left = []
@@ -116,12 +73,18 @@ print(f'Left: {leftA}, Center: {centerA}, Right: {rightA}')
 tmp = img.copy()
 if leftA > centerA and leftA > rightA:
     print('Left')
-    cv2.drawContours(tmp, left, -1, (0, 255, 0), 5)
+    cv2.drawContours(tmp, left, -1, (0, 255, 0), -1)
+    bbox = cv2.boundingRect(np.concatenate(left))
+    cv2.rectangle(tmp, (bbox[0], bbox[1]), (bbox[0] + bbox[2], bbox[1] + bbox[3]), (0, 0, 255), 5)
 elif centerA > leftA and centerA > rightA:
     print('Center')
-    cv2.drawContours(tmp, center, -1, (0, 255, 0), 5)
+    cv2.drawContours(tmp, center, -1, (0, 255, 0), -1)
+    bbox = cv2.boundingRect(np.concatenate(center))
+    cv2.rectangle(tmp, (bbox[0], bbox[1]), (bbox[0] + bbox[2], bbox[1] + bbox[3]), (0, 0, 255), 5)
 else:
     print('Right')
-    cv2.drawContours(tmp, right, -1, (0, 255, 0), 5)
+    cv2.drawContours(tmp, right, -1, (0, 255, 0), -1)
+    bbox = cv2.boundingRect(np.concatenate(right))
+    cv2.rectangle(tmp, (bbox[0], bbox[1]), (bbox[0] + bbox[2], bbox[1] + bbox[3]), (0, 0, 255), 5)
 
-plt.imsave("debug/7.png", tmp)
+plt.imsave("debug/5.png", tmp)
