@@ -98,7 +98,9 @@ public class Main_Teleop extends LinearOpMode {
 
     @SuppressLint("DefaultLocale")
     public void actions() {
-        // conveyor tilt gear ratio: 600:1
+        // conveyor tilt gear ratio: 125:1
+        // 28 ticks per motor rev
+        // 3500 ticks per 360 degrees
         double sweep_speed = gamepad2.right_trigger - gamepad2.left_trigger + gamepad1.right_trigger - gamepad1.left_trigger;
 
         double targetConveyorAngle = 0;
@@ -115,13 +117,14 @@ public class Main_Teleop extends LinearOpMode {
             targetConveyorAngle -= 5.0;
         }
 
-        double convRevs = (targetConveyorAngle * 0.25);
+        double convRevs = (targetConveyorAngle / 360.0) * 3500.0 + mecanumDriver.convAng.getCurrentPosition();
 
         if (convRevs != 0.0) {
             mecanumDriver.convAng.setPower(Math.signum(convRevs) * 0.35);
-            mecanumDriver.convAng.setTargetPosition((int) (mecanumDriver.convAng.getCurrentPosition() + convRevs));
+            mecanumDriver.convAng.setTargetPosition((int) (convRevs));
         } else if (!mecanumDriver.convAng.isBusy()) {
             mecanumDriver.convAng.setPower(0.0);
+            mecanumDriver.convAng.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             mecanumDriver.convAng.setTargetPosition(mecanumDriver.convAng.getCurrentPosition());
         }
         telemetry.addData(

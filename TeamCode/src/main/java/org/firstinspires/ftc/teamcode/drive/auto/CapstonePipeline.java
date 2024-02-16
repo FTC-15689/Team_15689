@@ -11,14 +11,16 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
-import java.util.Collections;
 import java.util.List;
 
 public class CapstonePipeline extends OpenCvPipeline {
 
+    private Mat edges;
+    private Mat hierarchy;
+
     /*
-    Confidence of a position?
-     */
+            Confidence of a position?
+             */
     public enum CapstonePosition {
         LEFT, CENTER, RIGHT
     }
@@ -59,37 +61,19 @@ public class CapstonePipeline extends OpenCvPipeline {
     public volatile CapstonePosition position = CapstonePosition.LEFT;
     public volatile ColorMode bestChannel = ColorMode.ANY;
 
+    // Mat variables
+    private Mat redChannel;
+    private Mat blueChannel;
+    private Mat rgChannel;
+    private Mat bgChannel;
+    private Mat targetChannel;
+    private Mat prevTargetChannel;
+
     @Override
     public void init(Mat firstFrame) {
         leftRegionCb = firstFrame.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
         centerRegionCb = firstFrame.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
         rightRegionCb = firstFrame.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
-    }
-
-    public double calcMeans(Mat input) {
-        leftRegionCb = input.submat(new Rect(LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT));
-        centerRegionCb = input.submat(new Rect(CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT));
-        rightRegionCb = input.submat(new Rect(RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT));
-
-        Scalar leftMean = Core.mean(leftRegionCb);
-        Scalar centerMean = Core.mean(centerRegionCb);
-        Scalar rightMean = Core.mean(rightRegionCb);
-
-        leftAvg = leftMean.val[0];
-        centerAvg = centerMean.val[0];
-        rightAvg = rightMean.val[0];
-
-        return Math.max(leftAvg, Math.max(centerAvg, rightAvg));
-    }
-
-    double getMedian(Mat hist) {
-        int median = hist.rows() / 2;
-
-        if (hist.rows() % 2 == 1) {
-            return hist.get(median, 0)[0];
-        } else {
-            return (hist.get(median - 1, 0)[0] + hist.get(median, 0)[0]) / 2;
-        }
     }
 
     private Mat extractChannel(Mat src, int index) {
@@ -99,66 +83,136 @@ public class CapstonePipeline extends OpenCvPipeline {
         return tmp;
     }
 
+    private Mat clip(Mat src, double min, double max) {
+        Mat tmp = new Mat();
+        Mat below = new Mat();
+        Mat above = new Mat();
+        src.copyTo(tmp);
+
+        // create a mask of the pixels where below min -> 0 else 1
+        Core.compare(tmp, new Scalar(min), below, Core.CMP_LT);
+        // create a mask of the pixels where above max -> 0 else 1
+        Core.compare(tmp, new Scalar(max), above, Core.CMP_GT);
+
+        // set the pixels where below min to min
+        tmp.setTo(new Scalar(min), below);
+        // set the pixels where above max to max
+        tmp.setTo(new Scalar(max), above);
+
+        return tmp;
+    }
+
+    /**
+     * Clip the values of src to CV_8U
+     * @param src the mat to clip as a 1 channel mat
+     * @return the clipped mat
+     */
+    private Mat clip(Mat src) {
+        double min = 0;
+        double max = Math.pow(2, 8) - 1;
+
+        return clip(src, min, max);
+    }
+
     @Override
     public Mat processFrame(Mat input) {
         // extract the red and blue channels
-        Mat redChannel = extractChannel(input, 0);
-        Mat blueChannel = extractChannel(input, 2);
+        redChannel = extractChannel(input, 0);
+        redChannel.convertTo(redChannel, CvType.CV_16S);
+        blueChannel = extractChannel(input, 2);
+        blueChannel.convertTo(blueChannel, CvType.CV_16S);
+        targetChannel = new Mat();
 
-        // find which channel has the higher std dev
-        MatOfDouble redMean = new MatOfDouble();
-        MatOfDouble redStd = new MatOfDouble();
-        Core.meanStdDev(redChannel, redMean, redStd);
+        // find the diff mats
+        rgChannel = new Mat();
+        bgChannel = new Mat();
 
-        MatOfDouble blueMean = new MatOfDouble();
-        MatOfDouble blueStd = new MatOfDouble();
-        Core.meanStdDev(blueChannel, blueMean, blueStd);
+        rgChannel = extractChannel(input, 1);
+        rgChannel.convertTo(rgChannel, CvType.CV_16S);
+        bgChannel = extractChannel(input, 1);
+        bgChannel.convertTo(bgChannel, CvType.CV_16S);
 
-        double redVal = redStd.get(0, 0)[0];
-        double blueVal = blueStd.get(0, 0)[0];
+        Core.add(redChannel, rgChannel, rgChannel);
+        Core.add(blueChannel, bgChannel, bgChannel);
 
-        Mat targetChannel;
-        Mat avg_others;
+        // divide the rg and bg channels by 2.0
+        Core.divide(rgChannel, new Scalar(2.0), rgChannel);
+        Core.divide(bgChannel, new Scalar(2.0), bgChannel);
+
+        // take the difference of r-bg and b-rg
+        Core.subtract(redChannel, bgChannel, bgChannel);
+        Core.subtract(blueChannel, rgChannel, rgChannel);
+
+        // clip the negative values
+        rgChannel = clip(rgChannel);
+        bgChannel = clip(bgChannel);
+
+        // find the std of the rg and bg channels
+        MatOfDouble mean_rg = new MatOfDouble();
+        MatOfDouble std_rg = new MatOfDouble();
+        Core.meanStdDev(rgChannel, mean_rg, std_rg);
+
+        MatOfDouble mean_bg = new MatOfDouble();
+        MatOfDouble std_bg = new MatOfDouble();
+        Core.meanStdDev(bgChannel, mean_bg, std_bg);
+
+        double redVal = std_rg.get(0, 0)[0];
+        double blueVal = std_bg.get(0, 0)[0];
+
+        mean_rg.release();
+        std_rg.release();
+        mean_bg.release();
+        std_bg.release();
 
         if (redVal > blueVal) {
             bestChannel = ColorMode.RED;
-            blueChannel.release();
-            targetChannel = redChannel.clone();
-            redChannel.release();
-
-            avg_others = new Mat();
-            Core.extractChannel(input, avg_others, 1);
-            Core.add(avg_others, extractChannel(input, 2), avg_others);
-            Core.divide(avg_others, new Scalar(2), avg_others);
+            redChannel.copyTo(targetChannel);
         } else {
             bestChannel = ColorMode.BLUE;
-            redChannel.release();
-            targetChannel = blueChannel.clone();
-            blueChannel.release();
+            blueChannel.copyTo(targetChannel);
+        }
+        bestChannel = ColorMode.RED;
+        bgChannel.copyTo(targetChannel);
 
-            avg_others = new Mat();
-            Core.extractChannel(input, avg_others, 0);
-            Core.add(avg_others, extractChannel(input, 1), avg_others);
-            Core.divide(avg_others, new Scalar(2), avg_others);
+        redChannel.release();
+        blueChannel.release();
+        rgChannel.release();
+        bgChannel.release();
+
+        targetChannel.convertTo(targetChannel, CvType.CV_8U);
+
+        if (prevTargetChannel == null) {
+            prevTargetChannel = targetChannel;
+
+            bestChannel = ColorMode.RED;
+            position = CapstonePosition.LEFT;
+
+            return targetChannel;
         }
 
-        // subtract the average of the other two channels from the target channel thus removing the background
-        Core.subtract(targetChannel, avg_others, targetChannel);
-        avg_others.release();
-        Core.inRange(targetChannel, new Scalar(0), new Scalar(255), targetChannel);
+        // sum the target and previous channel then clip to above 255
+        targetChannel.convertTo(targetChannel, CvType.CV_16S);
+        prevTargetChannel.convertTo(prevTargetChannel, CvType.CV_16S);
 
-        // pass a threshold of 100 to the target channel
+        Core.add(targetChannel, prevTargetChannel, targetChannel);
+        Core.subtract(targetChannel, new Scalar(255), targetChannel);
+        clip(targetChannel);
+
+        // pass a threshold of 50 to the target channel
         Imgproc.threshold(targetChannel, targetChannel, 50, 255, Imgproc.THRESH_BINARY);
 
+        // convert the target channel to 8U
+        targetChannel.convertTo(targetChannel, CvType.CV_8U);
+
         // find the edges in the target channel
-        Mat edges = new Mat();
+        edges = new Mat();
         Imgproc.Canny(targetChannel, edges, 100, 200);
 
         // dilate the edges
         Imgproc.dilate(edges, edges, new Mat(), new Point(-1, -1), 1);
 
         // find the contours in the edges
-        Mat hierarchy = new Mat();
+        hierarchy = new Mat();
         List<MatOfPoint> contours = new java.util.ArrayList<>();
         Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
@@ -178,57 +232,53 @@ public class CapstonePipeline extends OpenCvPipeline {
         input.convertTo(input, CvType.CV_8U);
         Imgproc.drawContours(input, contours, -1, bestChannel == ColorMode.RED ? RED : BLUE, 15);
 
-        // Using the center of the bounding box around each contour, group them into the left, center, and right regions
-        List<List<MatOfPoint>> leftRegions = new java.util.ArrayList<>();
-        List<List<MatOfPoint>> centerRegions = new java.util.ArrayList<>();
-        List<List<MatOfPoint>> rightRegions = new java.util.ArrayList<>();
-
-        int leftX = (int) (input.width() / 3.0);
-        int rightX = (int) (input.width() * 2.0 / 3.0);
-        int centerX = (int) (input.width() / 2.0);
+        // Using the center of the bounding box around each contour, group them into the left and right regions
+        double leftArea = 0;
+        double rightArea = 0;
 
         for (MatOfPoint contour : contours) {
             Rect boundingBox = Imgproc.boundingRect(contour);
             Point center = new Point(boundingBox.x + boundingBox.width / 2.0, boundingBox.y + boundingBox.height / 2.0);
-
-            if (center.x < leftX) {
-                leftRegions.add(Collections.singletonList(contour));
-            } else if (center.x > rightX) {
-                rightRegions.add(Collections.singletonList(contour));
-            } else {
-                centerRegions.add(Collections.singletonList(contour));
+            if (center.x < (double) (REGION_WIDTH * 3) / 2) {
+                leftArea += Imgproc.contourArea(contour);
+            } else if (center.x > (double) (REGION_WIDTH * 3) / 2) {
+                rightArea += Imgproc.contourArea(contour);
             }
         }
 
-        // find the group with the most area
-        double leftArea = leftRegions.stream().mapToDouble(region -> Imgproc.contourArea(region.get(0))).sum();
-        double centerArea = centerRegions.stream().mapToDouble(region -> Imgproc.contourArea(region.get(0))).sum();
-        double rightArea = rightRegions.stream().mapToDouble(region -> Imgproc.contourArea(region.get(0))).sum();
-
-        if (centerArea > leftArea && centerArea > rightArea) {
-            position = CapstonePosition.CENTER;
-
-            // draw the center region
-            Imgproc.rectangle(input, new Point(centerX - REGION_WIDTH / 2.0, 0), new Point(centerX + REGION_WIDTH / 2.0, input.height()), WHITE, 15);
-        }
-        else if (rightArea > leftArea && rightArea > centerArea) {
-            position = CapstonePosition.RIGHT;
-
-            // draw the right region
-            Imgproc.rectangle(input, new Point(rightX - REGION_WIDTH / 2.0, 0), new Point(rightX + REGION_WIDTH / 2.0, input.height()), WHITE, 15);
-        }
-        else {
+        // see if the two areas are similar and if so then the position is LEFT
+        if (Math.abs(leftArea - rightArea) < 1000) {
             position = CapstonePosition.LEFT;
+        } else if (leftArea > rightArea) {
+            position = CapstonePosition.CENTER;
+        } else {
+            position = CapstonePosition.RIGHT;
+        }
 
-            // draw the left region
-            Imgproc.rectangle(input, new Point(leftX - REGION_WIDTH / 2.0, 0), new Point(leftX + REGION_WIDTH / 2.0, input.height()), WHITE, 15);
+        // draw a rectangle on the input to show the regions
+        switch (position) {
+            case LEFT:
+                Imgproc.rectangle(input, LEFT_TOPLEFT_ANCHOR_POINT, LEFT_BOTTOMRIGHT_ANCHOR_POINT, RED, 5);
+                break;
+            case CENTER:
+                Imgproc.rectangle(input, CENTER_TOPLEFT_ANCHOR_POINT, CENTER_BOTTOMRIGHT_ANCHOR_POINT, GREEN, 5);
+                break;
+            case RIGHT:
+                Imgproc.rectangle(input, RIGHT_TOPLEFT_ANCHOR_POINT, RIGHT_BOTTOMRIGHT_ANCHOR_POINT, BLUE, 5);
+                break;
         }
 
         // convert input to int
         input.convertTo(input, CvType.CV_8U);
-        targetChannel.convertTo(targetChannel, CvType.CV_8U);
 
-        return input;
+        // release the mats
+        leftRegionCb.release();
+        centerRegionCb.release();
+        rightRegionCb.release();
+        edges.release();
+        hierarchy.release();
+
+        return targetChannel;
     }
 
     public double[] getAnalysis() {
