@@ -1,14 +1,12 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
 import android.annotation.SuppressLint;
-
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
@@ -21,12 +19,12 @@ import java.util.List;
 @TeleOp(name = "!0: Teleop-Main", group = "Linear Opmode")
 public class Main_Teleop extends LinearOpMode {
 
+    public static final double HIGH_RAMP = 0.9;
+    public static final double LOW_RAMP = 0.62;
     private static final boolean USE_WEBCAM = true;
     // Declare OpMode members for each of the 4 motors.
     private final ElapsedTime runtime = new ElapsedTime();
     private MecanumDrive mecanumDriver;
-    private int hangTarget = 0;
-    private boolean hangBtnDown = false;
     private boolean driveModeBtnDown = false;
     private int paperState = 0;
     private boolean paperBtnDown = false;
@@ -41,9 +39,9 @@ public class Main_Teleop extends LinearOpMode {
         double max;
 
         // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-        double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+        double axial = -gamepad1.left_stick_y - gamepad1.right_stick_y;  // Note: pushing stick forward gives negative value
         double lateral = gamepad1.left_stick_x;
-        double yaw = (-gamepad1.right_stick_y + gamepad1.right_stick_x) * 0.75;
+        double yaw = (gamepad1.right_stick_x) * 0.75;
 
         // Combine the joystick requests for each axis-motion to determine each wheel's power.
         // Set up a variable for each drive wheel to save the power level for telemetry.
@@ -140,15 +138,15 @@ public class Main_Teleop extends LinearOpMode {
         // servos
         // ramp thingy
         if (gamepad2.a) { // low
-            mecanumDriver.ramp.setPosition(0.0);
+            mecanumDriver.ramp.setPosition(LOW_RAMP);
         } else if (gamepad2.b) { // high
-            mecanumDriver.ramp.setPosition(1.0);
+            mecanumDriver.ramp.setPosition(HIGH_RAMP);
         }
-        telemetry.addData("Ramp", mecanumDriver.ramp.getPosition() >= 0.5 ? "High" : "Low");
+        telemetry.addData("Ramp", mecanumDriver.ramp.getPosition() >= LOW_RAMP + (HIGH_RAMP - LOW_RAMP) / 2.0 ? "High" : "Low");
         // sweeper
         if (sweep_speed != 0.0) {
             mecanumDriver.swp2.setPower(bounded(sweep_speed, -0.75, 0.75));
-            if (mecanumDriver.ramp.getPosition() <= 0.5) {
+            if (mecanumDriver.ramp.getPosition() <= LOW_RAMP + (HIGH_RAMP - LOW_RAMP) / 2.0) {
                 mecanumDriver.swp0.setPower(bounded(sweep_speed, -1.0, 1.0));
                 mecanumDriver.swp1.setPower(bounded(-sweep_speed, -1.0, 1.0));
             } else {
@@ -160,39 +158,22 @@ public class Main_Teleop extends LinearOpMode {
             mecanumDriver.swp1.setPower(0.0);
             mecanumDriver.swp2.setPower(0.0);
         }
-        telemetry.addData("Sweep speed:", mecanumDriver.swp0.getPower() - mecanumDriver.swp1.getPower());
+        telemetry.addData("Sweep speed:", (sweep_speed == 0.0) ? "Stopped" : (sweep_speed > 0.0 ? "Sweeping" : "Reversing"));
 
         // hanging
-        if (!gamepad1.x && !gamepad1.y) {
-            hangBtnDown = false;
+        double hanger_power = (gamepad1.x ? 1 : 0) - (gamepad1.y ? 1 : 0);
+        if (Math.signum(hanger_power) != 0) {
+            mecanumDriver.hanger0.setPower(hanger_power);
+            mecanumDriver.hanger1.setPower(hanger_power);
         }
-        if (gamepad1.y && !hangBtnDown) {
-            if (hangTarget < 0) {
-                hangTarget = 0;
-            } else {
-                hangTarget = -2;
-            }
-            hangBtnDown = true;
-        } else if (gamepad1.x && !hangBtnDown) {
-            if (hangTarget > 0) {
-                hangTarget = 0;
-            } else {
-                hangTarget = 2;
-            }
-            hangBtnDown = true;
-        }
+        else {
+            mecanumDriver.hanger0.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            mecanumDriver.hanger1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        if (hangTarget == 2) {
-            mecanumDriver.hanger0.setPower(1.0);
-            mecanumDriver.hanger1.setPower(1.0);
-        } else if (hangTarget == -2) {
-            mecanumDriver.hanger0.setPower(-0.5);
-            mecanumDriver.hanger1.setPower(-0.5);
-        } else {
             mecanumDriver.hanger0.setPower(0.0);
             mecanumDriver.hanger1.setPower(0.0);
         }
-        telemetry.addData("Hanger:", hangTarget == 0 ? "Hold Pos" : (hangTarget > 0 ? "Lifting" : "Lowering"));
+        telemetry.addData("Hanger:", Math.signum(hanger_power) == 0 ? "Hold Pos" : (Math.signum(hanger_power) > 0 ? "Lifting" : "Lowering"));
 
         // paper plane
         if (!gamepad2.y) {

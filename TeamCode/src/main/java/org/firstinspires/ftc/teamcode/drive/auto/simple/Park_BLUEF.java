@@ -5,7 +5,6 @@ import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
 import org.firstinspires.ftc.teamcode.drive.MecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 
@@ -25,10 +24,17 @@ public class Park_BLUEF extends LinearOpMode {
         drive.setPoseEstimate(startPose);
 
         TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(-39.00, 63.00, Math.toRadians(-90.00)))
-                .splineTo(new Vector2d(-39.00, 20.00), Math.toRadians(-90.00))
-                .splineTo(new Vector2d(-20.00, 12.00), Math.toRadians(0.00))
-                .lineTo(new Vector2d(14.00, 12.00))
-                .lineTo(new Vector2d(49.88, 17.36))
+                .splineTo(new Vector2d(-50.00, 36.00), Math.toRadians(-90.00))
+                .lineToLinearHeading(new Pose2d(-50.00, 10.00, Math.toRadians(180.00)))
+                .lineToConstantHeading(new Vector2d(15.00, 10.00))
+                .lineToSplineHeading(new Pose2d(15.00, 18.00, Math.toRadians(90.00)))
+                .splineTo(new Vector2d(45.00, 36.00), Math.toRadians(0.00))
+                .build();
+
+        TrajectorySequence Park_Blue2 = drive.trajectorySequenceBuilder(new Pose2d(45.00, 36.00, Math.toRadians(0.00)))
+                .splineToConstantHeading(new Vector2d(20.00, 36.00), Math.toRadians(0.00))
+                .splineToConstantHeading(new Vector2d(20.00, 12.00), Math.toRadians(0.00))
+                .splineToConstantHeading(new Vector2d(60.00, 12.00), Math.toRadians(0.00))
                 .build();
 
         drive.setPoseEstimate(Park_Blue.start());
@@ -43,5 +49,19 @@ public class Park_BLUEF extends LinearOpMode {
 
         drive.followTrajectorySequence(Park_Blue);
         drive.getPoseEst();
+
+        // spit out the two pixels
+        drive.swp0.setPower(-1);
+        drive.swp1.setPower(1);
+        drive.swp2.setPower(-0.6);
+
+        sleep(2000);
+
+        drive.swp0.setPower(0);
+        drive.swp1.setPower(0);
+        drive.swp2.setPower(0);
+
+        drive.setPoseEstimate(Park_Blue2.start());
+        drive.followTrajectorySequence(Park_Blue2);
     }
 }
