@@ -35,8 +35,8 @@ public class Park_REDF extends LinearOpMode {
                 .build();
 
         TrajectorySequence Park_Red2 = drive.trajectorySequenceBuilder(new Pose2d(45.00, -36.00, Math.toRadians(360.00)))
-                .splineToConstantHeading(new Vector2d(20.00, -36.00), Math.toRadians(360.00))
-                .splineToConstantHeading(new Vector2d(20.00, -12.00), Math.toRadians(360.00))
+                .splineToConstantHeading(new Vector2d(28.00, -36.00), Math.toRadians(360.00))
+                .splineToConstantHeading(new Vector2d(48.00, -12.00), Math.toRadians(360.00))
                 .splineToConstantHeading(new Vector2d(60.00, -12.00), Math.toRadians(360.00))
                 .build();
 
@@ -55,9 +55,9 @@ public class Park_REDF extends LinearOpMode {
 
         // set the conveyor down
         int target_ticks = (int) (3500.0 * 90.0 / 360.0);
-        drive.convAng.setTargetPosition(drive.convAng.getCurrentPosition() - target_ticks);
+        drive.convAng.setTargetPosition(drive.convAng.getCurrentPosition() + target_ticks);
         while (drive.convAng.isBusy()) {
-            drive.convAng.setPower(-0.5);
+            drive.convAng.setPower(0.5);
         }
         drive.convAng.setPower(0);
 

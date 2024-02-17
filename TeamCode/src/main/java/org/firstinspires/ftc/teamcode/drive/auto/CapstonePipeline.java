@@ -1,13 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive.auto;
 
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfDouble;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
-import org.opencv.core.Rect;
-import org.opencv.core.Scalar;
+import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
@@ -116,6 +109,7 @@ public class CapstonePipeline extends OpenCvPipeline {
 
     @Override
     public Mat processFrame(Mat input) {
+        Imgproc.cvtColor(input, input, Imgproc.COLOR_RGBA2RGB);
         // extract the red and blue channels
         redChannel = extractChannel(input, 0);
         redChannel.convertTo(redChannel, CvType.CV_16S);

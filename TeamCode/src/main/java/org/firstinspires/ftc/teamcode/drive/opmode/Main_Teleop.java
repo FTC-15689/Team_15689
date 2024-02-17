@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.drive.opmode;
 import android.annotation.SuppressLint;
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -30,6 +31,11 @@ public class Main_Teleop extends LinearOpMode {
     private boolean paperBtnDown = false;
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private RampPos rampPos = RampPos.LOW;
+
+    private enum RampPos {
+        LOW, HIGH
+    }
 
     public double bounded(double num, double low, double high) {
         return Math.min(high, Math.max(low, num));
@@ -39,9 +45,15 @@ public class Main_Teleop extends LinearOpMode {
         double max;
 
         // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-        double axial = -gamepad1.left_stick_y - gamepad1.right_stick_y;  // Note: pushing stick forward gives negative value
+        // Note: pushing stick forward gives negative values, so we have to invert it
+        double axial = -gamepad1.left_stick_y - gamepad1.right_stick_y;
         double lateral = gamepad1.left_stick_x;
         double yaw = (gamepad1.right_stick_x) * 0.75;
+
+        // prevent field damage
+        if (rampPos == RampPos.LOW) {
+            axial = bounded(axial, -1, 0);
+        }
 
         // Combine the joystick requests for each axis-motion to determine each wheel's power.
         // Set up a variable for each drive wheel to save the power level for telemetry.
@@ -139,10 +151,14 @@ public class Main_Teleop extends LinearOpMode {
         // ramp thingy
         if (gamepad2.a) { // low
             mecanumDriver.ramp.setPosition(LOW_RAMP);
+            rampPos = RampPos.LOW;
+            mecanumDriver.led.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
         } else if (gamepad2.b) { // high
             mecanumDriver.ramp.setPosition(HIGH_RAMP);
+            rampPos = RampPos.HIGH;
+            mecanumDriver.led.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
         }
-        telemetry.addData("Ramp", mecanumDriver.ramp.getPosition() >= LOW_RAMP + (HIGH_RAMP - LOW_RAMP) / 2.0 ? "High" : "Low");
+        telemetry.addData("Ramp", rampPos == RampPos.LOW ? "Low" : "High");
         // sweeper
         if (sweep_speed != 0.0) {
             mecanumDriver.swp2.setPower(bounded(sweep_speed, -0.75, 0.75));
