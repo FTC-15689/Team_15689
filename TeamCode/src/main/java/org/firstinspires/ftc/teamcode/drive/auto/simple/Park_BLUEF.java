@@ -26,6 +26,9 @@ public class Park_BLUEF extends LinearOpMode {
         TrajectorySequence Park_Blue = drive.trajectorySequenceBuilder(new Pose2d(-39.00, 63.00, Math.toRadians(-90.00)))
                 .splineTo(new Vector2d(-50.00, 36.00), Math.toRadians(-90.00))
                 .lineToLinearHeading(new Pose2d(-50.00, 10.00, Math.toRadians(180.00)))
+                .build();
+
+        TrajectorySequence Park_Blue1 = drive.trajectorySequenceBuilder(new Pose2d(-50.00, 10.00, Math.toRadians(180.00)))
                 .lineToConstantHeading(new Vector2d(15.00, 10.00))
                 .lineToSplineHeading(new Pose2d(15.00, 18.00, Math.toRadians(90.00)))
                 .splineTo(new Vector2d(45.00, 36.00), Math.toRadians(0.00))
@@ -48,6 +51,17 @@ public class Park_BLUEF extends LinearOpMode {
         }
 
         drive.followTrajectorySequence(Park_Blue);
+        drive.getPoseEst();
+
+        // set the conveyor down
+        int target_ticks = (int) (3500.0 * 90.0 / 360.0);
+        drive.convAng.setTargetPosition(drive.convAng.getCurrentPosition() - target_ticks);
+        while (drive.convAng.isBusy()) {
+            drive.convAng.setPower(-0.5);
+        }
+        drive.convAng.setPower(0);
+
+        drive.followTrajectorySequence(Park_Blue1);
         drive.getPoseEst();
 
         // spit out the two pixels
